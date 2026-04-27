@@ -19,6 +19,7 @@ import type { EPageStoreType } from "@/plane-web/hooks/store";
 // store
 import type { TPageInstance } from "@/store/pages/base-page";
 // local imports
+import { PageEditorDiagnosticsOverlay, useDebugFlag } from "../fork/diagnostics";
 import { PageNavigationPaneRoot } from "../navigation-pane";
 import { PageVersionsOverlay } from "../version";
 import { PagesVersionEditor } from "../version/editor";
@@ -71,6 +72,8 @@ export const PageRoot = observer(function PageRoot(props: TPageRootProps) {
     isContentEditable,
     editor: { setEditorRef },
   } = page;
+  // fork: dev-only diagnostics overlay (?debug=editor)
+  const isEditorDiagnosticsEnabled = useDebugFlag("editor");
   // page fallback
   const { isFetchingFallbackBinary } = usePageFallback({
     editorRef,
@@ -201,6 +204,16 @@ export const PageRoot = observer(function PageRoot(props: TPageRootProps) {
         extensions={navigationPaneExtensions}
       />
       <PageModals page={page} storeType={storeType} />
+      {isEditorDiagnosticsEnabled && (
+        <PageEditorDiagnosticsOverlay
+          collaborationState={collaborationState}
+          editorRef={editorRef}
+          editorReady={editorReady}
+          isContentEditable={isContentEditable}
+          pageId={page.id}
+          pageName={page.name}
+        />
+      )}
     </div>
   );
 });
