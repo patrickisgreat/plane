@@ -6,7 +6,6 @@
 
 import { useState } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
 import { ChevronRight, Plus } from "lucide-react";
 import { setToast, TOAST_TYPE } from "@plane/propel/toast";
 import { getPageName } from "@plane/utils";
@@ -38,7 +37,6 @@ export const PageBreadcrumb = observer(function PageBreadcrumb(props: Props) {
   const { page, storeType } = props;
   const ancestors = usePageAncestors(storeType, page.id);
   const { createPage } = usePageStore(storeType);
-  const params = useParams();
   const [isCreating, setIsCreating] = useState(false);
 
   const handleCreateChild = async () => {
@@ -46,24 +44,18 @@ export const PageBreadcrumb = observer(function PageBreadcrumb(props: Props) {
     setIsCreating(true);
     try {
       const newPage = await createPage({ name: "", parent: page.id, access: page.access });
-      const workspaceSlug = params.workspaceSlug?.toString();
-      const projectId = params.projectId?.toString();
-      if (!newPage?.id || !workspaceSlug || !projectId) return;
+      if (!newPage?.id) return;
 
-      const childUrl = `/${workspaceSlug}/projects/${projectId}/pages/${newPage.id}`;
-      const childLabel = getPageName(newPage.name) || "Untitled";
       const editor = page.editor.editorRef;
       let insertedIntoBody = false;
       if (editor) {
-        // Insert a live page-mention node at the top of the parent body. The NodeView
-        // re-reads the page name from the store on every render, so when the child gets
-        // renamed every reference in any open parent updates immediately.
-        const safeLabel = childLabel.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        const nodeHtml =
-          `<p>` +
-          `<a data-page-mention="true" data-page-id="${newPage.id}" href="${childUrl}">${safeLabel}</a>` +
-          `</p>`;
-        editor.insertContentAtPosition(0, nodeHtml);
+        // Insert a live page-mention node directly via JSON spec rather than HTML. Going
+        // through HTML lets Tiptap's CustomLink mark claim the <a> first; building the
+        // ProseMirror node directly bypasses parsing and guarantees the NodeView mounts.
+        editor.insertContentAtPosition(0, {
+          type: "paragraph",
+          content: [{ type: "pageMention", attrs: { pageId: newPage.id } }],
+        });
         insertedIntoBody = true;
       }
       setToast({

@@ -129,9 +129,11 @@ export type CoreEditorRefApi = {
   copyMarkdownToClipboard: () => void;
   getSelectedText: () => string | null;
   insertText: (contentHTML: string, insertOnNextLine?: boolean) => void;
-  // fork: insert HTML at an absolute document position, clamped to the doc bounds. Unlike
-  // insertText, works regardless of the current selection state.
-  insertContentAtPosition: (position: number, contentHTML: string) => void;
+  // fork: insert content at an absolute document position, clamped to the doc bounds. Accepts
+  // either an HTML string or a Tiptap JSONContent node spec. Unlike insertText, works
+  // regardless of the current selection state. Prefer JSONContent when inserting custom
+  // schema nodes (e.g. pageMention) so parsing rules / mark precedence don't intervene.
+  insertContentAtPosition: (position: number, content: string | JSONContent | JSONContent[]) => void;
   isAnyDropbarOpen: () => boolean;
   isEditorReadyToDiscard: () => boolean;
   isMenuItemActive: <T extends TEditorCommands>(props: TCommandWithPropsWithItemKey<T>) => boolean;

@@ -193,7 +193,7 @@ export const getEditorRefHelpers = (args: TArgs): EditorRefApi => {
     // fork: insert content at an absolute document position. Selection-independent — useful
     // for programmatic injections (e.g. surfacing a new sub-page link at the top of the
     // parent's body). Clamps the position to the doc bounds.
-    insertContentAtPosition: (position, contentHTML) => {
+    insertContentAtPosition: (position, content) => {
       if (!editor || editor.isDestroyed) {
         console.error("Editor reference is not available or has been destroyed.");
         return;
@@ -201,7 +201,7 @@ export const getEditorRefHelpers = (args: TArgs): EditorRefApi => {
       try {
         const docSize = editor.state.doc.content.size;
         const safePosition = Math.max(0, Math.min(position, docSize));
-        editor.chain().insertContentAt(safePosition, contentHTML).run();
+        editor.chain().insertContentAt(safePosition, content).run();
       } catch (error) {
         console.error("An error occurred while inserting content at position:", error);
       }
