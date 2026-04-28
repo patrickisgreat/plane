@@ -19,6 +19,7 @@ import type { EPageStoreType } from "@/plane-web/hooks/store";
 // store
 import type { TPageInstance } from "@/store/pages/base-page";
 // local imports
+import { PageBreadcrumb } from "../fork/breadcrumb";
 import { PageEditorDiagnosticsOverlay, useDebugFlag } from "../fork/diagnostics";
 import { PageNavigationPaneRoot } from "../navigation-pane";
 import { PageVersionsOverlay } from "../version";
@@ -172,6 +173,8 @@ export const PageRoot = observer(function PageRoot(props: TPageRootProps) {
           isNavigationPaneOpen={isNavigationPaneOpen}
           page={page}
         />
+        {/* fork: parent breadcrumb + create-sub-page affordance for in-editor navigation. */}
+        <PageBreadcrumb page={page} storeType={storeType} />
         {showContentTooLargeBanner && <ContentLimitBanner className="px-page-x" />}
         <PageEditorBody
           config={config}
