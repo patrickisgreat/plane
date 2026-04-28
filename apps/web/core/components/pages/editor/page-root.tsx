@@ -21,6 +21,7 @@ import type { TPageInstance } from "@/store/pages/base-page";
 // local imports
 import { PageBreadcrumb } from "../fork/breadcrumb";
 import { PageEditorDiagnosticsOverlay, useDebugFlag } from "../fork/diagnostics";
+import { drainPendingChildLinksFor } from "../fork/page-mention";
 import { PageNavigationPaneRoot } from "../navigation-pane";
 import { PageVersionsOverlay } from "../version";
 import { PagesVersionEditor } from "../version/editor";
@@ -99,6 +100,24 @@ export const PageRoot = observer(function PageRoot(props: TPageRootProps) {
       setEditorRef(editorRef.current);
     }, 0);
   }, [isContentEditable, setEditorRef]);
+
+  // fork: drain any page-mention inserts the tree-row + button enqueued before navigating
+  // here. We need editor ready AND the Yjs doc fully synced — inserting before sync would
+  // race against the incoming server state and the link could be discarded.
+  const isServerSynced = collaborationState?.isServerSynced ?? false;
+  useEffect(() => {
+    if (!editorReady || !isServerSynced || !page.id) return;
+    const editor = editorRef.current;
+    if (!editor) return;
+    const pending = drainPendingChildLinksFor(page.id);
+    if (pending.length === 0) return;
+    for (const entry of pending) {
+      editor.insertContentAtPosition(0, {
+        type: "paragraph",
+        content: [{ type: "pageMention", attrs: { pageId: entry.childId } }],
+      });
+    }
+  }, [editorReady, isServerSynced, page.id]);
 
   // Get extensions and navigation logic from hook
   const {
