@@ -17,6 +17,10 @@ def _list_pages_url(workspace_slug: str, project_id) -> str:
     return f"/api/workspaces/{workspace_slug}/projects/{project_id}/pages/"
 
 
+def _detail_pages_url(workspace_slug: str, project_id, page_id) -> str:
+    return f"/api/workspaces/{workspace_slug}/projects/{project_id}/pages/{page_id}/"
+
+
 def _make_page(workspace, project, owner, *, name: str, parent: Page = None) -> Page:
     page = Page.objects.create(
         workspace=workspace,
@@ -80,3 +84,44 @@ class TestProjectPagesIncludeChildren:
         assert by_id[str(child_page.id)]["parent"] == str(root_page.id)
         assert by_id[str(grandchild_page.id)]["parent"] == str(child_page.id)
         assert by_id[str(root_page.id)]["parent"] is None
+
+
+@pytest.mark.contract
+class TestProjectPagesNonListActionsIgnoreRootFilter:
+    """
+    Regression: the parent_isnull filter must apply to `list` only — `retrieve`, the
+    post-create response fetch, and `partial_update` all need to return child pages.
+    Before this fix, creating a sub-page returned a 404 even though the row was inserted.
+    """
+
+    @pytest.mark.django_db
+    def test_retrieve_returns_a_child_page(self, session_client, workspace, create_user):
+        project = Project.objects.create(name="Pages Project", identifier="PP", workspace=workspace)
+        ProjectMember.objects.create(project=project, member=create_user, role=20, is_active=True)
+
+        root_page = _make_page(workspace, project, create_user, name="Root")
+        child_page = _make_page(workspace, project, create_user, name="Child", parent=root_page)
+
+        response = session_client.get(_detail_pages_url(workspace.slug, project.id, child_page.id))
+
+        assert response.status_code == status.HTTP_200_OK
+        body = response.json()
+        assert str(body["id"]) == str(child_page.id)
+        assert body["parent"] == str(root_page.id)
+
+    @pytest.mark.django_db
+    def test_create_returns_201_when_parent_is_set(self, session_client, workspace, create_user):
+        project = Project.objects.create(name="Pages Project", identifier="PP", workspace=workspace)
+        ProjectMember.objects.create(project=project, member=create_user, role=20, is_active=True)
+
+        root_page = _make_page(workspace, project, create_user, name="Root")
+
+        response = session_client.post(
+            _list_pages_url(workspace.slug, project.id),
+            {"name": "", "parent": str(root_page.id), "access": 0},
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED, response.content
+        body = response.json()
+        assert body["parent"] == str(root_page.id)

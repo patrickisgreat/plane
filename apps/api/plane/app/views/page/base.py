@@ -98,7 +98,10 @@ class PageViewSet(BaseViewSet):
                 projects__archived_at__isnull=True,
             )
         )
-        if not include_children:
+        # fork: only collapse to roots on the list action — every other action (retrieve, the
+        # post-create fetch, partial_update, archive, lock, etc.) must be able to look up a
+        # specific page by id regardless of whether it has a parent.
+        if self.action == "list" and not include_children:
             queryset = queryset.filter(parent__isnull=True)
         return self.filter_queryset(
             queryset.filter(Q(owned_by=self.request.user) | Q(access=0))
