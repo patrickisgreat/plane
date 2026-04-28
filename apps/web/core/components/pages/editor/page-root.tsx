@@ -117,6 +117,11 @@ export const PageRoot = observer(function PageRoot(props: TPageRootProps) {
         content: [{ type: "pageMention", attrs: { pageId: entry.childId } }],
       });
     }
+    // Place the cursor right after the most-recently-inserted link (which sits at the very
+    // top of the body now). Position 2 is "inside the first paragraph, just past the
+    // pageMention atom" — so a press of Enter / arrow keys / Backspace acts in context of
+    // the new link rather than wherever the user left their cursor before navigating here.
+    editor.focus(2);
   }, [editorReady, isServerSynced, page.id]);
 
   // Get extensions and navigation logic from hook
