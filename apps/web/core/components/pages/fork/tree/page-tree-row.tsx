@@ -19,6 +19,17 @@ import { usePage, usePageStore } from "@/plane-web/hooks/store";
 
 const INDENT_PER_LEVEL = 16;
 
+const extractApiErrorMessage = (error: unknown): string | undefined => {
+  if (typeof error !== "object" || error === null) return undefined;
+  for (const key of ["error", "detail", "message"] as const) {
+    if (key in error) {
+      const value = (error as Record<string, unknown>)[key];
+      if (typeof value === "string" && value.length > 0) return value;
+    }
+  }
+  return undefined;
+};
+
 type Props = {
   pageId: string;
   depth: number;
@@ -47,17 +58,19 @@ export const PageTreeRow = observer(function PageTreeRow(props: Props) {
     setIsCreating(true);
     setExpanded(true);
     try {
-      const newPage = await createPage({ parent: pageId, access });
+      // Pass an explicit empty name; the create serializer expects the field present.
+      const newPage = await createPage({ name: "", parent: pageId, access });
       const workspaceSlug = params.workspaceSlug?.toString();
       const projectId = params.projectId?.toString();
       if (newPage?.id && workspaceSlug && projectId) {
         router.push(`/${workspaceSlug}/projects/${projectId}/pages/${newPage.id}`);
       }
-    } catch {
+    } catch (error) {
+      const apiMessage = extractApiErrorMessage(error);
       setToast({
         type: TOAST_TYPE.ERROR,
         title: "Couldn't create sub-page",
-        message: "Please try again. If it keeps failing, check the page list and reload.",
+        message: apiMessage ?? "Please try again. If it keeps failing, check the page list and reload.",
       });
     } finally {
       setIsCreating(false);
@@ -88,7 +101,7 @@ export const PageTreeRow = observer(function PageTreeRow(props: Props) {
             <PageIcon className="size-3.5 text-tertiary" />
           )}
         </span>
-        <a href={getRedirectionLink()} className="grow truncate text-primary" title={getPageName(name)}>
+        <a href={getRedirectionLink()} className="max-w-full min-w-0 truncate text-primary" title={getPageName(name)}>
           {getPageName(name)}
         </a>
         <button
@@ -101,6 +114,8 @@ export const PageTreeRow = observer(function PageTreeRow(props: Props) {
         >
           <Plus className="size-3.5" />
         </button>
+        {/* Spacer fills the remaining row width so hover bg covers the whole row. */}
+        <div className="grow" />
       </div>
       {hasChildren && expanded && (
         <>
