@@ -41,6 +41,7 @@ function DocumentEditor(props: IDocumentEditorProps) {
     id,
     isTouchDevice,
     mentionHandler,
+    pageMentionHandler,
     onChange,
     user,
     value,
@@ -84,6 +85,7 @@ function DocumentEditor(props: IDocumentEditorProps) {
     id,
     initialValue: value,
     mentionHandler,
+    pageMentionHandler,
     onChange,
   });
 

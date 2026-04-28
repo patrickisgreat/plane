@@ -41,6 +41,7 @@ export const useEditor = (props: TEditorHookProps) => {
     initialValue,
     isTouchDevice,
     mentionHandler,
+    pageMentionHandler,
     onAssetChange,
     onChange,
     onEditorFocus,
@@ -76,6 +77,7 @@ export const useEditor = (props: TEditorHookProps) => {
           getEditorMetaData,
           isTouchDevice,
           mentionHandler,
+          pageMentionHandler,
           placeholder,
           showPlaceholderOnEmpty,
           tabIndex,
@@ -88,10 +90,10 @@ export const useEditor = (props: TEditorHookProps) => {
       onTransaction: () => {
         onTransaction?.();
       },
-      onUpdate: ({ editor, transaction }) => {
+      onUpdate: ({ editor: updatedEditor, transaction }) => {
         // Check if this update is only due to migration update
         const isMigrationUpdate = transaction?.getMeta("uniqueIdOnlyChange") === true;
-        onChange?.(editor.getJSON(), editor.getHTML(), { isMigrationUpdate });
+        onChange?.(updatedEditor.getJSON(), updatedEditor.getHTML(), { isMigrationUpdate });
       },
       onDestroy: () => handleEditorReady?.(false),
       onFocus: onEditorFocus,
@@ -133,8 +135,8 @@ export const useEditor = (props: TEditorHookProps) => {
   // subscribe to assets list changes
   const assetsList = useEditorState({
     editor,
-    selector: ({ editor }) => ({
-      assets: editor?.storage.utility?.assetsList ?? [],
+    selector: ({ editor: tiptapEditor }) => ({
+      assets: tiptapEditor?.storage.utility?.assetsList ?? [],
     }),
   });
   // trigger callback when assets list changes
