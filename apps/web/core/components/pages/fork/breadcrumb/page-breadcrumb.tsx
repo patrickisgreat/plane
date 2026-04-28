@@ -59,19 +59,16 @@ export const PageBreadcrumb = observer(function PageBreadcrumb(props: Props) {
       let insertedIntoBody = false;
       if (editor) {
         const safeLabel = childLabel.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        // Always anchor the insertion at the end of the document. insertText is a no-op when
-        // the editor has no active selection, which is the case as soon as the user clicks the
-        // breadcrumb button (DOM focus moves to the button). Focusing "end" first guarantees
-        // the link lands somewhere predictable regardless of where the user was previously.
-        editor.focus("end");
-        editor.insertText(`<p><a href="${childUrl}">${safeLabel}</a></p>`, true);
+        // Insert at position 0 (top of the body) using a selection-independent API so it
+        // works regardless of whether the user's cursor was in the editor when they clicked.
+        editor.insertContentAtPosition(0, `<p><a href="${childUrl}">${safeLabel}</a></p>`);
         insertedIntoBody = true;
       }
       setToast({
         type: TOAST_TYPE.SUCCESS,
         title: "Sub-page created",
         message: insertedIntoBody
-          ? "A link to the new page was added at the end of this page."
+          ? "A link to the new page was added to the top of this page."
           : "Open it from the page tree on the left.",
       });
     } catch (error) {
