@@ -85,7 +85,10 @@ class PageViewSet(BaseViewSet):
             entity_identifier=OuterRef("pk"),
             workspace__slug=self.kwargs.get("slug"),
         )
-        return self.filter_queryset(
+        # fork: opt-in flag so the client can pull the full page tree (parents + children)
+        # in a single request. Default behavior (roots only) is preserved for upstream callers.
+        include_children = self.request.GET.get("include_children", "false").lower() == "true"
+        queryset = (
             super()
             .get_queryset()
             .filter(workspace__slug=self.kwargs.get("slug"))
@@ -94,8 +97,11 @@ class PageViewSet(BaseViewSet):
                 projects__project_projectmember__is_active=True,
                 projects__archived_at__isnull=True,
             )
-            .filter(parent__isnull=True)
-            .filter(Q(owned_by=self.request.user) | Q(access=0))
+        )
+        if not include_children:
+            queryset = queryset.filter(parent__isnull=True)
+        return self.filter_queryset(
+            queryset.filter(Q(owned_by=self.request.user) | Q(access=0))
             .prefetch_related("projects")
             .select_related("workspace")
             .select_related("owned_by")

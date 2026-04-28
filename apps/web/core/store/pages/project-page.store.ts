@@ -173,6 +173,8 @@ export class ProjectPageStore implements IProjectPageStore {
     let filteredPages = pagesByType.filter(
       (p) =>
         p.project_ids?.includes(projectId) &&
+        // fork: store now holds the full tree, but the flat-list view still wants roots only.
+        !p.parent &&
         getPageName(p.name).toLowerCase().includes(this.filters.searchQuery.toLowerCase()) &&
         shouldFilterPage(p, this.filters.filters)
     );
@@ -216,7 +218,8 @@ export class ProjectPageStore implements IProjectPageStore {
         this.error = undefined;
       });
 
-      const pages = await this.service.fetchAll(workspaceSlug, projectId);
+      // fork: pull the full tree (parents + children) so sub-pages live in the store and can be edited / surfaced.
+      const pages = await this.service.fetchAll(workspaceSlug, projectId, { includeChildren: true });
       runInAction(() => {
         for (const page of pages) {
           if (page?.id) {
