@@ -49,6 +49,8 @@ env:
 
 jobs:
   branch_build_setup:
+    # fork: only run on upstream — needs Docker Hub creds + makeplane image owner.
+    if: github.repository == 'makeplane/plane'
     name: Build Setup
     runs-on: ubuntu-22.04
     outputs:
@@ -137,6 +139,8 @@ jobs:
         uses: actions/checkout@v6
 
   branch_build_push_admin:
+    # fork: only run on upstream — needs Docker Hub creds + makeplane image owner.
+    if: github.repository == 'makeplane/plane'
     name: Build-Push Admin Docker Image
     runs-on: ubuntu-22.04
     needs: [branch_build_setup]
@@ -159,6 +163,8 @@ jobs:
           buildx-endpoint: ${{ needs.branch_build_setup.outputs.gh_buildx_endpoint }}
 
   branch_build_push_web:
+    # fork: only run on upstream — needs Docker Hub creds + makeplane image owner.
+    if: github.repository == 'makeplane/plane'
     name: Build-Push Web Docker Image
     runs-on: ubuntu-22.04
     needs: [branch_build_setup]
@@ -181,6 +187,8 @@ jobs:
           buildx-endpoint: ${{ needs.branch_build_setup.outputs.gh_buildx_endpoint }}
 
   branch_build_push_space:
+    # fork: only run on upstream — needs Docker Hub creds + makeplane image owner.
+    if: github.repository == 'makeplane/plane'
     name: Build-Push Space Docker Image
     runs-on: ubuntu-22.04
     needs: [branch_build_setup]
@@ -203,6 +211,8 @@ jobs:
           buildx-endpoint: ${{ needs.branch_build_setup.outputs.gh_buildx_endpoint }}
 
   branch_build_push_live:
+    # fork: only run on upstream — needs Docker Hub creds + makeplane image owner.
+    if: github.repository == 'makeplane/plane'
     name: Build-Push Live Collaboration Docker Image
     runs-on: ubuntu-22.04
     needs: [branch_build_setup]
@@ -225,6 +235,8 @@ jobs:
           buildx-endpoint: ${{ needs.branch_build_setup.outputs.gh_buildx_endpoint }}
 
   branch_build_push_api:
+    # fork: only run on upstream — needs Docker Hub creds + makeplane image owner.
+    if: github.repository == 'makeplane/plane'
     name: Build-Push API Server Docker Image
     runs-on: ubuntu-22.04
     needs: [branch_build_setup]
@@ -247,6 +259,8 @@ jobs:
           buildx-endpoint: ${{ needs.branch_build_setup.outputs.gh_buildx_endpoint }}
 
   branch_build_push_proxy:
+    # fork: only run on upstream — needs Docker Hub creds + makeplane image owner.
+    if: github.repository == 'makeplane/plane'
     name: Build-Push Proxy Docker Image
     runs-on: ubuntu-22.04
     needs: [branch_build_setup]
@@ -269,7 +283,8 @@ jobs:
           buildx-endpoint: ${{ needs.branch_build_setup.outputs.gh_buildx_endpoint }}
 
   branch_build_push_aio:
-    if: ${{ needs.branch_build_setup.outputs.aio_build == 'true' }}
+    # fork: only run on upstream — needs Docker Hub creds + makeplane image owner.
+    if: ${{ github.repository == 'makeplane/plane' && needs.branch_build_setup.outputs.aio_build == 'true' }}
     name: Build-Push AIO Docker Image
     runs-on: ubuntu-22.04
     needs:
@@ -325,6 +340,8 @@ jobs:
             PLANE_VERSION=${{ steps.prepare_aio_assets.outputs.AIO_BUILD_VERSION }}
 
   upload_build_assets:
+    # fork: only run on upstream — depends on the upstream-only build chain.
+    if: github.repository == 'makeplane/plane'
     name: Upload Build Assets
     runs-on: ubuntu-22.04
     needs:
@@ -364,7 +381,8 @@ jobs:
             ./deployments/swarm/community/swarm.sh
 
   publish_release:
-    if: ${{ needs.branch_build_setup.outputs.build_type == 'Release' }}
+    # fork: only run on upstream — releases publish under the makeplane org.
+    if: ${{ github.repository == 'makeplane/plane' && needs.branch_build_setup.outputs.build_type == 'Release' }}
     name: Build Release
     runs-on: ubuntu-22.04
     needs:
