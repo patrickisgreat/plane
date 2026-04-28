@@ -10,7 +10,6 @@ import { useParams } from "next/navigation";
 import { ChevronRight, Plus } from "lucide-react";
 import { setToast, TOAST_TYPE } from "@plane/propel/toast";
 import { getPageName } from "@plane/utils";
-import { useAppRouter } from "@/hooks/use-app-router";
 // plane web hooks
 import type { EPageStoreType } from "@/plane-web/hooks/store";
 import { usePageStore } from "@/plane-web/hooks/store";
@@ -39,7 +38,6 @@ export const PageBreadcrumb = observer(function PageBreadcrumb(props: Props) {
   const { page, storeType } = props;
   const ancestors = usePageAncestors(storeType, page.id);
   const { createPage } = usePageStore(storeType);
-  const router = useAppRouter();
   const params = useParams();
   const [isCreating, setIsCreating] = useState(false);
 
@@ -50,9 +48,23 @@ export const PageBreadcrumb = observer(function PageBreadcrumb(props: Props) {
       const newPage = await createPage({ name: "", parent: page.id, access: page.access });
       const workspaceSlug = params.workspaceSlug?.toString();
       const projectId = params.projectId?.toString();
-      if (newPage?.id && workspaceSlug && projectId) {
-        router.push(`/${workspaceSlug}/projects/${projectId}/pages/${newPage.id}`);
+      if (!newPage?.id || !workspaceSlug || !projectId) return;
+
+      const childUrl = `/${workspaceSlug}/projects/${projectId}/pages/${newPage.id}`;
+      // fork: insert a static link to the new child in the parent's body so the parent
+      // surfaces its children inline. Phase 4 will replace this with a live page-mention
+      // node that re-renders the label when the child is renamed.
+      const childLabel = getPageName(newPage.name) || "New sub-page";
+      const editor = page.editor.editorRef;
+      if (editor) {
+        const safeLabel = childLabel.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        editor.insertText(`<p><a href="${childUrl}">${safeLabel}</a></p>`, true);
       }
+      setToast({
+        type: TOAST_TYPE.SUCCESS,
+        title: "Sub-page created",
+        message: editor ? "A link to the new page was added to this page." : "Open it from the page tree on the left.",
+      });
     } catch (error) {
       const apiMessage = extractApiErrorMessage(error);
       setToast({
