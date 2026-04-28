@@ -6,13 +6,16 @@
 
 import { useState } from "react";
 import { observer } from "mobx-react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { useParams } from "next/navigation";
+import { ChevronDown, ChevronRight, Plus } from "lucide-react";
 import { Logo } from "@plane/propel/emoji-icon-picker";
 import { PageIcon } from "@plane/propel/icons";
+import { setToast, TOAST_TYPE } from "@plane/propel/toast";
 import { getPageName } from "@plane/utils";
+import { useAppRouter } from "@/hooks/use-app-router";
 // plane web hooks
 import type { EPageStoreType } from "@/plane-web/hooks/store";
-import { usePage } from "@/plane-web/hooks/store";
+import { usePage, usePageStore } from "@/plane-web/hooks/store";
 
 const INDENT_PER_LEVEL = 16;
 
@@ -26,12 +29,40 @@ type Props = {
 export const PageTreeRow = observer(function PageTreeRow(props: Props) {
   const { pageId, depth, childIdsByParent, storeType } = props;
   const page = usePage({ pageId, storeType });
+  const { createPage } = usePageStore(storeType);
+  const router = useAppRouter();
+  const params = useParams();
   const [expanded, setExpanded] = useState(true);
+  const [isCreating, setIsCreating] = useState(false);
 
   if (!page) return null;
-  const { name, logo_props, getRedirectionLink } = page;
+  const { name, logo_props, access, getRedirectionLink } = page;
   const childIds = childIdsByParent[pageId] ?? [];
   const hasChildren = childIds.length > 0;
+
+  const handleCreateChild = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isCreating) return;
+    setIsCreating(true);
+    setExpanded(true);
+    try {
+      const newPage = await createPage({ parent: pageId, access });
+      const workspaceSlug = params.workspaceSlug?.toString();
+      const projectId = params.projectId?.toString();
+      if (newPage?.id && workspaceSlug && projectId) {
+        router.push(`/${workspaceSlug}/projects/${projectId}/pages/${newPage.id}`);
+      }
+    } catch {
+      setToast({
+        type: TOAST_TYPE.ERROR,
+        title: "Couldn't create sub-page",
+        message: "Please try again. If it keeps failing, check the page list and reload.",
+      });
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   return (
     <>
@@ -60,6 +91,16 @@ export const PageTreeRow = observer(function PageTreeRow(props: Props) {
         <a href={getRedirectionLink()} className="grow truncate text-primary" title={getPageName(name)}>
           {getPageName(name)}
         </a>
+        <button
+          type="button"
+          onClick={handleCreateChild}
+          disabled={isCreating}
+          className="flex size-5 shrink-0 items-center justify-center rounded text-tertiary opacity-0 transition-opacity group-hover:opacity-100 hover:bg-layer-transparent-hover hover:text-primary focus:opacity-100 disabled:cursor-progress disabled:opacity-100"
+          aria-label="New sub-page"
+          title="New sub-page"
+        >
+          <Plus className="size-3.5" />
+        </button>
       </div>
       {hasChildren && expanded && (
         <>
