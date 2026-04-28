@@ -13,6 +13,8 @@ env:
 
 jobs:
   branch_build_setup:
+    # fork: only run on upstream — deploys to upstream's k8s feature-preview cluster.
+    if: github.repository == 'makeplane/plane'
     name: Build Setup
     runs-on: ubuntu-latest
     outputs:
@@ -51,6 +53,8 @@ jobs:
         uses: actions/checkout@v6
 
   full_build_push:
+    # fork: only run on upstream — needs Docker Hub creds + makeplane image owner.
+    if: github.repository == 'makeplane/plane'
     runs-on: ubuntu-22.04
     needs: [branch_build_setup]
     env:
@@ -99,6 +103,8 @@ jobs:
       AIO_IMAGE_TAGS: ${{ env.AIO_IMAGE_TAGS }}
 
   feature-deploy:
+    # fork: only run on upstream — deploys to upstream's k8s feature-preview cluster.
+    if: github.repository == 'makeplane/plane'
     needs: [branch_build_setup, full_build_push]
     name: Feature Deploy
     runs-on: ubuntu-latest
