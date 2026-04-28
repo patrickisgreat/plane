@@ -140,16 +140,16 @@ export const getEditorRefHelpers = (args: TArgs): EditorRefApi => {
       const { itemKey } = props;
       const editorItems = getEditorMenuItems(editor);
 
-      const getEditorMenuItem = (itemKey: TEditorCommands) => editorItems.find((item) => item.key === itemKey);
+      const findEditorMenuItem = (key: TEditorCommands) => editorItems.find((item) => item.key === key);
 
-      const item = getEditorMenuItem(itemKey);
+      const item = findEditorMenuItem(itemKey);
       if (item) {
         item.command(props);
       } else {
         console.warn(`No command found for item: ${itemKey}`);
       }
     },
-    focus: (args) => editor?.commands.focus(args),
+    focus: (focusArgs) => editor?.commands.focus(focusArgs),
     getCoordsFromPos: (pos) => editor?.view.coordsAtPos(pos ?? editor.state.selection.from),
     getCurrentCursorPosition: () => editor?.state.selection.from,
     getAttributesWithExtendedMark: (mark, attribute) => {
@@ -190,13 +190,29 @@ export const getEditorRefHelpers = (args: TArgs): EditorRefApi => {
         editor.chain().focus().deleteRange({ from, to }).insertContent(contentHTML).run();
       }
     },
+    // fork: insert content at an absolute document position. Selection-independent — useful
+    // for programmatic injections (e.g. surfacing a new sub-page link at the top of the
+    // parent's body). Clamps the position to the doc bounds.
+    insertContentAtPosition: (position, contentHTML) => {
+      if (!editor || editor.isDestroyed) {
+        console.error("Editor reference is not available or has been destroyed.");
+        return;
+      }
+      try {
+        const docSize = editor.state.doc.content.size;
+        const safePosition = Math.max(0, Math.min(position, docSize));
+        editor.chain().insertContentAt(safePosition, contentHTML).run();
+      } catch (error) {
+        console.error("An error occurred while inserting content at position:", error);
+      }
+    },
     isEditorReadyToDiscard: () => editor?.storage?.utility?.uploadInProgress === false,
     isMenuItemActive: (props) => {
       const { itemKey } = props;
       const editorItems = getEditorMenuItems(editor);
 
-      const getEditorMenuItem = (itemKey: TEditorCommands) => editorItems.find((item) => item.key === itemKey);
-      const item = getEditorMenuItem(itemKey);
+      const findEditorMenuItem = (key: TEditorCommands) => editorItems.find((item) => item.key === key);
+      const item = findEditorMenuItem(itemKey);
       if (!item) return false;
 
       return item.isActive(props);

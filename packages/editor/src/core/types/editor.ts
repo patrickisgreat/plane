@@ -129,6 +129,9 @@ export type CoreEditorRefApi = {
   copyMarkdownToClipboard: () => void;
   getSelectedText: () => string | null;
   insertText: (contentHTML: string, insertOnNextLine?: boolean) => void;
+  // fork: insert HTML at an absolute document position, clamped to the doc bounds. Unlike
+  // insertText, works regardless of the current selection state.
+  insertContentAtPosition: (position: number, contentHTML: string) => void;
   isAnyDropbarOpen: () => boolean;
   isEditorReadyToDiscard: () => boolean;
   isMenuItemActive: <T extends TEditorCommands>(props: TCommandWithPropsWithItemKey<T>) => boolean;
