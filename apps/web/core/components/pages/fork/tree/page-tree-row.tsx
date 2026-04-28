@@ -7,15 +7,19 @@
 import { useState } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "next/navigation";
-import { ChevronDown, ChevronRight, Plus } from "lucide-react";
+import { ArchiveRestoreIcon, ChevronDown, ChevronRight, Plus } from "lucide-react";
 import { Logo } from "@plane/propel/emoji-icon-picker";
-import { PageIcon } from "@plane/propel/icons";
+import { ArchiveIcon, PageIcon } from "@plane/propel/icons";
 import { setToast, TOAST_TYPE } from "@plane/propel/toast";
+import { AlertModalCore } from "@plane/ui";
 import { getPageName } from "@plane/utils";
 import { useAppRouter } from "@/hooks/use-app-router";
+import { usePageOperations } from "@/hooks/use-page-operations";
 // plane web hooks
 import type { EPageStoreType } from "@/plane-web/hooks/store";
 import { usePage, usePageStore } from "@/plane-web/hooks/store";
+// store types
+import type { TPageInstance } from "@/store/pages/base-page";
 
 const INDENT_PER_LEVEL = 16;
 
@@ -38,18 +42,29 @@ type Props = {
 };
 
 export const PageTreeRow = observer(function PageTreeRow(props: Props) {
-  const { pageId, depth, childIdsByParent, storeType } = props;
+  const { pageId, storeType } = props;
   const page = usePage({ pageId, storeType });
+  if (!page) return null;
+  return <PageTreeRowContent {...props} page={page} />;
+});
+
+type ContentProps = Props & { page: TPageInstance };
+
+const PageTreeRowContent = observer(function PageTreeRowContent(props: ContentProps) {
+  const { page, pageId, depth, childIdsByParent, storeType } = props;
   const { createPage } = usePageStore(storeType);
+  const { pageOperations } = usePageOperations({ page });
   const router = useAppRouter();
   const params = useParams();
   const [expanded, setExpanded] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
+  const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
 
-  if (!page) return null;
-  const { name, logo_props, access, getRedirectionLink } = page;
+  const { name, logo_props, access, archived_at, canCurrentUserArchivePage, getRedirectionLink } = page;
   const childIds = childIdsByParent[pageId] ?? [];
   const hasChildren = childIds.length > 0;
+  const isArchived = !!archived_at;
 
   const handleCreateChild = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -76,6 +91,31 @@ export const PageTreeRow = observer(function PageTreeRow(props: Props) {
       setIsCreating(false);
     }
   };
+
+  const openArchiveConfirm = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setArchiveConfirmOpen(true);
+  };
+
+  const handleArchiveConfirm = async () => {
+    if (isArchiving) return;
+    setIsArchiving(true);
+    try {
+      await pageOperations.toggleArchive();
+      setArchiveConfirmOpen(false);
+    } finally {
+      setIsArchiving(false);
+    }
+  };
+
+  const archiveLabel = isArchived ? "Restore page" : "Archive page";
+  const archiveCopy = isArchived
+    ? "This page and any sub-pages will be moved back to the active list."
+    : "This page and any sub-pages will be moved to the archived tab. You can restore them anytime.";
+  const archivePrimaryText = isArchived
+    ? { default: "Restore", loading: "Restoring..." }
+    : { default: "Archive", loading: "Archiving..." };
 
   return (
     <>
@@ -114,9 +154,34 @@ export const PageTreeRow = observer(function PageTreeRow(props: Props) {
         >
           <Plus className="size-3.5" />
         </button>
+        {canCurrentUserArchivePage && (
+          <button
+            type="button"
+            onClick={openArchiveConfirm}
+            className="flex size-5 shrink-0 items-center justify-center rounded text-tertiary opacity-0 transition-opacity group-hover:opacity-100 hover:bg-layer-transparent-hover hover:text-primary focus:opacity-100"
+            aria-label={archiveLabel}
+            title={archiveLabel}
+          >
+            {isArchived ? (
+              <ArchiveRestoreIcon className="size-3.5" />
+            ) : (
+              <ArchiveIcon className="size-3.5" color="currentColor" />
+            )}
+          </button>
+        )}
         {/* Spacer fills the remaining row width so hover bg covers the whole row. */}
         <div className="grow" />
       </div>
+      <AlertModalCore
+        isOpen={archiveConfirmOpen}
+        handleClose={() => !isArchiving && setArchiveConfirmOpen(false)}
+        handleSubmit={handleArchiveConfirm}
+        isSubmitting={isArchiving}
+        title={archiveLabel}
+        content={archiveCopy}
+        variant={isArchived ? "primary" : "danger"}
+        primaryButtonText={archivePrimaryText}
+      />
       {hasChildren && expanded && (
         <>
           {childIds.map((childId) => (
