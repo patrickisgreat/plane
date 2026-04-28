@@ -18,7 +18,8 @@ import lightPagesAsset from "@/app/assets/empty-state/disabled-feature/pages-lig
 // components
 import { PageHead } from "@/components/core/page-title";
 import { DetailedEmptyState } from "@/components/empty-state/detailed-empty-state-root";
-import { PagesListRoot } from "@/components/pages/list/root";
+// fork: tree-aware page list (sub-pages render as children under their parent).
+import { PageTreeRoot } from "@/components/pages/fork/tree";
 import { PagesListView } from "@/components/pages/pages-list-view";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
@@ -81,7 +82,7 @@ function ProjectPagesPage({ params }: Route.ComponentProps) {
         storeType={EPageStoreType.PROJECT}
         workspaceSlug={workspaceSlug}
       >
-        <PagesListRoot pageType={pageType} storeType={EPageStoreType.PROJECT} />
+        <PageTreeRoot pageType={pageType} storeType={EPageStoreType.PROJECT} />
       </PagesListView>
     </>
   );
