@@ -36,6 +36,8 @@ export const PageMentionExtension = (handler: TPageMentionHandler) =>
     atom: true,
     selectable: true,
     draggable: false,
+    // Outrank the CustomLink mark when both could match an `<a>` element on parse.
+    priority: 1001,
 
     addOptions() {
       return {
