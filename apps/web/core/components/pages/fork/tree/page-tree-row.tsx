@@ -15,6 +15,8 @@ import { AlertModalCore } from "@plane/ui";
 import { getPageName } from "@plane/utils";
 import { useAppRouter } from "@/hooks/use-app-router";
 import { usePageOperations } from "@/hooks/use-page-operations";
+// fork: queue a page-mention insert for the parent that the parent's editor will drain on mount.
+import { enqueuePendingChildLink } from "../page-mention";
 // plane web hooks
 import type { EPageStoreType } from "@/plane-web/hooks/store";
 import { usePage, usePageStore } from "@/plane-web/hooks/store";
@@ -78,7 +80,12 @@ const PageTreeRowContent = observer(function PageTreeRowContent(props: ContentPr
       const workspaceSlug = params.workspaceSlug?.toString();
       const projectId = params.projectId?.toString();
       if (newPage?.id && workspaceSlug && projectId) {
-        router.push(`/${workspaceSlug}/projects/${projectId}/pages/${newPage.id}`);
+        // Enqueue a page-mention insert so the parent's editor (which mounts after
+        // navigation) can drain it and add the live link. Then land the user on the
+        // PARENT, not the child — they see the new link in context, click it to dive
+        // into the child when they're ready to type a title.
+        enqueuePendingChildLink({ parentId: pageId, childId: newPage.id });
+        router.push(`/${workspaceSlug}/projects/${projectId}/pages/${pageId}`);
       }
     } catch (error) {
       const apiMessage = extractApiErrorMessage(error);

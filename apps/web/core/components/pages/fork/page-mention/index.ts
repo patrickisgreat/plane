@@ -5,3 +5,4 @@
  */
 
 export { usePageMentionHandler } from "./use-page-mention-handler";
+export { enqueuePendingChildLink, drainPendingChildLinksFor } from "./pending-child-link";
