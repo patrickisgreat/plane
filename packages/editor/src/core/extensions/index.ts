@@ -26,3 +26,5 @@ export * from "./quote";
 export * from "./side-menu";
 export * from "./text-align";
 export * from "./utility";
+// fork extensions live under fork/ to keep upstream merges clean.
+export * from "./fork/page-mention";

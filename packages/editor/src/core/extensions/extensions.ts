@@ -7,8 +7,8 @@
 import type { HocuspocusProvider } from "@hocuspocus/provider";
 import type { Extensions } from "@tiptap/core";
 import { CharacterCount } from "@tiptap/extension-character-count";
-import TaskItem from "@tiptap/extension-task-item";
-import TaskList from "@tiptap/extension-task-list";
+import TaskItemExtension from "@tiptap/extension-task-item";
+import TaskListExtension from "@tiptap/extension-task-list";
 import { TextStyle } from "@tiptap/extension-text-style";
 import { Underline } from "@tiptap/extension-underline";
 import { Markdown } from "tiptap-markdown";
@@ -22,6 +22,7 @@ import {
   CustomKeymap,
   CustomLinkExtension,
   CustomMentionExtension,
+  PageMentionExtension,
   CustomQuoteExtension,
   CustomTextAlignExtension,
   CustomTypographyExtension,
@@ -52,6 +53,7 @@ type TArguments = Pick<
   | "getEditorMetaData"
   | "isTouchDevice"
   | "mentionHandler"
+  | "pageMentionHandler"
   | "placeholder"
   | "showPlaceholderOnEmpty"
   | "tabIndex"
@@ -71,6 +73,7 @@ export const CoreEditorExtensions = (args: TArguments): Extensions => {
     getEditorMetaData,
     isTouchDevice = false,
     mentionHandler,
+    pageMentionHandler,
     placeholder,
     showPlaceholderOnEmpty,
     tabIndex,
@@ -92,12 +95,12 @@ export const CoreEditorExtensions = (args: TArguments): Extensions => {
     CustomTypographyExtension,
     Underline,
     TextStyle,
-    TaskList.configure({
+    TaskListExtension.configure({
       HTMLAttributes: {
         class: "not-prose pl-2 space-y-2",
       },
     }),
-    TaskItem.configure({
+    TaskItemExtension.configure({
       HTMLAttributes: {
         class: "relative",
       },
@@ -116,6 +119,9 @@ export const CoreEditorExtensions = (args: TArguments): Extensions => {
     TableCell,
     TableRow,
     CustomMentionExtension(mentionHandler),
+    // fork: register the live page-mention node only when a handler is supplied — keeps
+    // editors that don't surface the affordance unaffected.
+    ...(pageMentionHandler ? [PageMentionExtension(pageMentionHandler)] : []),
     CustomPlaceholderExtension({ placeholder, showPlaceholderOnEmpty }),
     CharacterCount,
     CustomColorExtension,

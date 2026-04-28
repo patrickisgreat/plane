@@ -42,6 +42,7 @@ import { useEditorFlagging } from "@/plane-web/hooks/use-editor-flagging";
 // store
 import type { TPageInstance } from "@/store/pages/base-page";
 // local imports
+import { usePageMentionHandler } from "../fork/page-mention";
 import { PageContentLoader } from "../loaders/page-content-loader";
 import { PageEditorHeaderRoot } from "./header";
 import { PageContentBrowser } from "./summary";
@@ -97,6 +98,8 @@ export const PageEditorBody = observer(function PageEditorBody(props: Props) {
   const { data: currentUser } = useUser();
   const { getWorkspaceBySlug } = useWorkspace();
   const { getUserDetails } = useMember();
+  // fork: live page-mention handler — render component reads page name from store reactively.
+  const pageMentionHandler = usePageMentionHandler(storeType);
   // derived values
   const {
     id: pageId,
@@ -244,14 +247,14 @@ export const PageEditorBody = observer(function PageEditorBody(props: Props) {
           <div className="page-summary-container absolute top-[64px] right-0 z-[5] h-full">
             <div className="sticky top-[72px]">
               <div className="group/page-toc relative px-page-x">
-                <div
-                  className="max-h-[50vh] !cursor-pointer overflow-hidden"
-                  role="button"
+                <button
+                  type="button"
+                  className="block max-h-[50vh] w-full !cursor-pointer overflow-hidden text-left"
                   aria-label={t("page_navigation_pane.outline_floating_button")}
                   onClick={handleOpenNavigationPane}
                 >
                   <PageContentBrowser className="overflow-y-auto" editorRef={editorRef} showOutline />
-                </div>
+                </button>
                 <div className="vertical-scrollbar pointer-events-none absolute top-0 right-0 scrollbar-sm max-h-[70vh] w-52 translate-x-1/2 overflow-y-scroll rounded-sm bg-surface-2 p-4 whitespace-nowrap opacity-0 transition-all duration-300 group-hover/page-toc:pointer-events-auto group-hover/page-toc:-translate-x-1/4 group-hover/page-toc:opacity-100">
                   <PageContentBrowser className="overflow-y-auto" editorRef={editorRef} />
                 </div>
@@ -281,9 +284,10 @@ export const PageEditorBody = observer(function PageEditorBody(props: Props) {
                 if (!res) throw new Error("Failed in fetching mentions");
                 return res;
               },
-              renderComponent: (props) => <EditorMentionsRoot {...props} />,
+              renderComponent: (mentionProps) => <EditorMentionsRoot {...mentionProps} />,
               getMentionedEntityDetails: (id: string) => ({ display_name: getUserDetails(id)?.display_name ?? "" }),
             }}
+            pageMentionHandler={pageMentionHandler}
             updatePageProperties={updatePageProperties}
             realtimeConfig={realtimeConfig}
             serverHandler={serverHandler}

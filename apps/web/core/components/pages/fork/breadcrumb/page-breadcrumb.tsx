@@ -51,17 +51,19 @@ export const PageBreadcrumb = observer(function PageBreadcrumb(props: Props) {
       if (!newPage?.id || !workspaceSlug || !projectId) return;
 
       const childUrl = `/${workspaceSlug}/projects/${projectId}/pages/${newPage.id}`;
-      // fork: insert a static link to the new child in the parent's body so the parent
-      // surfaces its children inline. Phase 4 will replace this with a live page-mention
-      // node that re-renders the label when the child is renamed.
-      const childLabel = getPageName(newPage.name) || "New sub-page";
+      const childLabel = getPageName(newPage.name) || "Untitled";
       const editor = page.editor.editorRef;
       let insertedIntoBody = false;
       if (editor) {
+        // Insert a live page-mention node at the top of the parent body. The NodeView
+        // re-reads the page name from the store on every render, so when the child gets
+        // renamed every reference in any open parent updates immediately.
         const safeLabel = childLabel.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        // Insert at position 0 (top of the body) using a selection-independent API so it
-        // works regardless of whether the user's cursor was in the editor when they clicked.
-        editor.insertContentAtPosition(0, `<p><a href="${childUrl}">${safeLabel}</a></p>`);
+        const nodeHtml =
+          `<p>` +
+          `<a data-page-mention="true" data-page-id="${newPage.id}" href="${childUrl}">${safeLabel}</a>` +
+          `</p>`;
+        editor.insertContentAtPosition(0, nodeHtml);
         insertedIntoBody = true;
       }
       setToast({

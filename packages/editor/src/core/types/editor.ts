@@ -12,7 +12,7 @@ import type { NodeViewProps as TNodeViewProps } from "@tiptap/react";
 // plane imports
 import type { TCustomComponentsMetaData } from "@plane/utils";
 // extension types
-import type { TTextAlign } from "@/extensions";
+import type { TPageMentionHandler, TTextAlign } from "@/extensions";
 // plane editor imports
 import type {
   IEditorPropsExtended,
@@ -174,6 +174,9 @@ export type IEditorProps = {
   initialValue: string;
   isTouchDevice?: boolean;
   mentionHandler: TMentionHandler;
+  // fork: live page-mention node (Notion-style sub-page link). Optional so callers that
+  // don't surface the affordance keep working unchanged.
+  pageMentionHandler?: TPageMentionHandler;
   onAssetChange?: (assets: TEditorAsset[]) => void;
   onEditorFocus?: () => void;
   onChange?: (json: object, html: string, { isMigrationUpdate }?: { isMigrationUpdate?: boolean }) => void;
