@@ -6,6 +6,7 @@
 
 import { Extension } from "@tiptap/core";
 import { ReactRenderer } from "@tiptap/react";
+import { PluginKey } from "@tiptap/pm/state";
 import SuggestionExtension from "@tiptap/suggestion";
 import type { SuggestionOptions } from "@tiptap/suggestion";
 // helpers
@@ -18,6 +19,9 @@ import { WikiLinkPopup } from "./popup";
 import type { TWikiLinkHandler, TWikiLinkSuggestion } from "./types";
 
 const WIKI_LINK_TRIGGER = "[[";
+// Distinct key so we don't collide with @-mention's default `suggestion$` plugin key,
+// which crashes the editor on mount with "Adding different instances of a keyed plugin".
+const WIKI_LINK_SUGGESTION_KEY = new PluginKey("forkWikiLinkSuggestion");
 
 const renderWikiLinkPopup =
   (handler: TWikiLinkHandler): SuggestionOptions<TWikiLinkSuggestion, TWikiLinkSuggestion>["render"] =>
@@ -89,6 +93,7 @@ export const WikiLinkExtension = (handler: TWikiLinkHandler) =>
         SuggestionExtension<TWikiLinkSuggestion, TWikiLinkSuggestion>({
           editor: this.editor,
           char: WIKI_LINK_TRIGGER,
+          pluginKey: WIKI_LINK_SUGGESTION_KEY,
           startOfLine: false,
           allowSpaces: true,
           // Items isn't actually consulted by the popup — the popup runs its own
