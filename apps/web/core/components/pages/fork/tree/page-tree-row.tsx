@@ -4,19 +4,22 @@
  * See the LICENSE file for details.
  */
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "next/navigation";
-import { ArchiveRestoreIcon, ChevronDown, ChevronRight, Plus } from "lucide-react";
+import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
+import { draggable, dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
+import { ArchiveRestoreIcon, ChevronDown, ChevronRight, GripVertical, Plus } from "lucide-react";
 import { Logo } from "@plane/propel/emoji-icon-picker";
 import { ArchiveIcon, PageIcon } from "@plane/propel/icons";
 import { setToast, TOAST_TYPE } from "@plane/propel/toast";
 import { AlertModalCore } from "@plane/ui";
-import { getPageName } from "@plane/utils";
+import { cn, getPageName } from "@plane/utils";
 import { useAppRouter } from "@/hooks/use-app-router";
 import { usePageOperations } from "@/hooks/use-page-operations";
 // fork: queue a page-mention insert for the parent that the parent's editor will drain on mount.
 import { enqueuePendingChildLink } from "../page-mention";
+import { isPageTreeDragData, PAGE_TREE_DRAG_TYPE, usePageTreeDragDrop } from "./use-page-tree-drag-drop";
 // plane web hooks
 import type { EPageStoreType } from "@/plane-web/hooks/store";
 import { usePage, usePageStore } from "@/plane-web/hooks/store";
@@ -58,15 +61,56 @@ const PageTreeRowContent = observer(function PageTreeRowContent(props: ContentPr
   const { pageOperations } = usePageOperations({ page });
   const router = useAppRouter();
   const params = useParams();
+  const reparent = usePageTreeDragDrop(storeType);
+  const rowRef = useRef<HTMLDivElement | null>(null);
   const [expanded, setExpanded] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isDropTarget, setIsDropTarget] = useState(false);
 
   const { name, logo_props, access, archived_at, canCurrentUserArchivePage, getRedirectionLink } = page;
   const childIds = childIdsByParent[pageId] ?? [];
   const hasChildren = childIds.length > 0;
   const isArchived = !!archived_at;
+
+  useEffect(() => {
+    const element = rowRef.current;
+    if (!element) return;
+    return combine(
+      draggable({
+        element,
+        getInitialData: () => ({ type: PAGE_TREE_DRAG_TYPE, pageId }),
+        onDragStart: () => {
+          setIsDragging(true);
+          setExpanded(false); // collapse during drag so target rows stay reachable
+        },
+        onDrop: () => setIsDragging(false),
+      }),
+      dropTargetForElements({
+        element,
+        canDrop: ({ source }) => {
+          if (!isPageTreeDragData(source.data)) return false;
+          // Don't let a row accept a drop from itself.
+          return source.data.pageId !== pageId;
+        },
+        getData: () => ({ type: PAGE_TREE_DRAG_TYPE, pageId }),
+        onDragEnter: () => setIsDropTarget(true),
+        onDragLeave: () => setIsDropTarget(false),
+        onDrop: ({ source }) => {
+          setIsDropTarget(false);
+          if (!isPageTreeDragData(source.data)) return;
+          if (source.data.pageId === pageId) return;
+          // Make this row the new parent of the dragged page. The hook handles
+          // cycle protection + optimistic update + rollback toast.
+          void reparent(source.data.pageId, pageId);
+          // Auto-expand so the user immediately sees the dropped child.
+          setExpanded(true);
+        },
+      })
+    );
+  }, [pageId, reparent]);
 
   const handleCreateChild = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -127,9 +171,19 @@ const PageTreeRowContent = observer(function PageTreeRowContent(props: ContentPr
   return (
     <>
       <div
-        className="group flex h-8 items-center gap-1 rounded-sm px-1 text-13 hover:bg-layer-transparent-hover"
+        ref={rowRef}
+        className={cn("group flex h-8 items-center gap-1 rounded-sm px-1 text-13 hover:bg-layer-transparent-hover", {
+          "opacity-50": isDragging,
+          "ring-accent-primary bg-layer-transparent-hover ring-2 ring-inset": isDropTarget,
+        })}
         style={{ paddingInlineStart: depth * INDENT_PER_LEVEL + 4 }}
       >
+        <span
+          className="flex size-3 shrink-0 cursor-grab items-center justify-center text-tertiary opacity-0 transition-opacity group-hover:opacity-100 active:cursor-grabbing"
+          aria-hidden
+        >
+          <GripVertical className="size-3" />
+        </span>
         <button
           type="button"
           onClick={() => hasChildren && setExpanded((v) => !v)}

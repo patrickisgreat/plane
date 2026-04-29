@@ -20,6 +20,10 @@ export type TBasePage = TPage & {
   // observables
   isSubmitting: TNameDescriptionLoader;
   isSyncingWithServer: "syncing" | "synced" | "error";
+  // services bag — exposed so fork callers (e.g. drag-drop reparent) can talk to the
+  // service directly when the higher-level `update` method's optimistic wrapper would
+  // strip a desired falsy value (e.g. `parent: null`).
+  services: TBasePageServices;
   // computed
   asJSON: TPage | undefined;
   isCurrentUserOwner: boolean;
