@@ -64,6 +64,8 @@ type TArguments = Pick<
   provider: HocuspocusProvider | undefined;
 };
 
+// Slash commands are registered via DocumentEditorAdditionalExtensions, not here, so
+// `additionalSlashCommands` doesn't need to flow through CoreEditorExtensions.
 export const CoreEditorExtensions = (args: TArguments): Extensions => {
   const {
     disabledExtensions,

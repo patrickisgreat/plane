@@ -25,8 +25,8 @@ export { ADDITIONAL_EXTENSIONS } from "@/plane-editor/constants/extensions";
 // types
 export * from "@/types";
 
-// fork: re-export page-mention types so consumers can supply the handler.
-export type { TPageMentionDetails, TPageMentionHandler } from "@/extensions";
+// fork: re-export page-mention + slash-command types so consumers can build handlers / commands.
+export type { TPageMentionDetails, TPageMentionHandler, TSlashCommandAdditionalOption } from "@/extensions";
 
 // additional exports
 export { TrailingNode } from "./core/extensions/trailing-node";
