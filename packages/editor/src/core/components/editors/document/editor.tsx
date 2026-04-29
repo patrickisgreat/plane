@@ -42,6 +42,7 @@ function DocumentEditor(props: IDocumentEditorProps) {
     isTouchDevice,
     mentionHandler,
     pageMentionHandler,
+    wikiLinkHandler,
     additionalSlashCommands,
     onChange,
     user,
@@ -96,6 +97,7 @@ function DocumentEditor(props: IDocumentEditorProps) {
     initialValue: value,
     mentionHandler,
     pageMentionHandler,
+    wikiLinkHandler,
     additionalSlashCommands,
     onChange,
   });

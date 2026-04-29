@@ -23,6 +23,7 @@ import {
   CustomLinkExtension,
   CustomMentionExtension,
   PageMentionExtension,
+  WikiLinkExtension,
   CustomQuoteExtension,
   CustomTextAlignExtension,
   CustomTypographyExtension,
@@ -54,6 +55,7 @@ type TArguments = Pick<
   | "isTouchDevice"
   | "mentionHandler"
   | "pageMentionHandler"
+  | "wikiLinkHandler"
   | "placeholder"
   | "showPlaceholderOnEmpty"
   | "tabIndex"
@@ -76,6 +78,7 @@ export const CoreEditorExtensions = (args: TArguments): Extensions => {
     isTouchDevice = false,
     mentionHandler,
     pageMentionHandler,
+    wikiLinkHandler,
     placeholder,
     showPlaceholderOnEmpty,
     tabIndex,
@@ -124,6 +127,9 @@ export const CoreEditorExtensions = (args: TArguments): Extensions => {
     // fork: register the live page-mention node only when a handler is supplied — keeps
     // editors that don't surface the affordance unaffected.
     ...(pageMentionHandler ? [PageMentionExtension(pageMentionHandler)] : []),
+    // fork: `[[Page]]` autocomplete. Reuses the pageMention node, just adds the typing
+    // entry point. Only registered when a handler is supplied.
+    ...(wikiLinkHandler ? [WikiLinkExtension(wikiLinkHandler)] : []),
     CustomPlaceholderExtension({ placeholder, showPlaceholderOnEmpty }),
     CharacterCount,
     CustomColorExtension,

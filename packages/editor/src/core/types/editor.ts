@@ -12,7 +12,7 @@ import type { NodeViewProps as TNodeViewProps } from "@tiptap/react";
 // plane imports
 import type { TCustomComponentsMetaData } from "@plane/utils";
 // extension types
-import type { TPageMentionHandler, TSlashCommandAdditionalOption, TTextAlign } from "@/extensions";
+import type { TPageMentionHandler, TSlashCommandAdditionalOption, TTextAlign, TWikiLinkHandler } from "@/extensions";
 // plane editor imports
 import type {
   IEditorPropsExtended,
@@ -181,6 +181,9 @@ export type IEditorProps = {
   // fork: live page-mention node (Notion-style sub-page link). Optional so callers that
   // don't surface the affordance keep working unchanged.
   pageMentionHandler?: TPageMentionHandler;
+  // fork: `[[Page]]` autocomplete. Typing the trigger opens a popup of pages; selecting
+  // one inserts a pageMention node at the suggestion range.
+  wikiLinkHandler?: TWikiLinkHandler;
   // fork: extra slash-command items the consumer wants to inject into the menu (e.g. the
   // "Create sub-page" command, which needs MobX-store / router access the editor package
   // can't reach on its own). Each item is built with closures over consumer state.
