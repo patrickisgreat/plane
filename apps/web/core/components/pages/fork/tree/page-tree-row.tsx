@@ -11,12 +11,14 @@ import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
 import { draggable, dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import { ArchiveRestoreIcon, ChevronDown, ChevronRight, GripVertical, Plus } from "lucide-react";
 import { Logo } from "@plane/propel/emoji-icon-picker";
-import { ArchiveIcon, PageIcon } from "@plane/propel/icons";
+import { ArchiveIcon, PageIcon, TrashIcon } from "@plane/propel/icons";
 import { setToast, TOAST_TYPE } from "@plane/propel/toast";
 import { AlertModalCore } from "@plane/ui";
 import { cn, getPageName } from "@plane/utils";
 import { useAppRouter } from "@/hooks/use-app-router";
 import { usePageOperations } from "@/hooks/use-page-operations";
+// upstream modals
+import { DeletePageModal } from "@/components/pages/modals/delete-page-modal";
 // fork: queue a page-mention insert for the parent that the parent's editor will drain on mount.
 import { enqueuePendingChildLink } from "../page-mention";
 import { isPageTreeDragData, PAGE_TREE_DRAG_TYPE, usePageTreeDragDrop } from "./use-page-tree-drag-drop";
@@ -67,10 +69,19 @@ const PageTreeRowContent = observer(function PageTreeRowContent(props: ContentPr
   const [isCreating, setIsCreating] = useState(false);
   const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isDropTarget, setIsDropTarget] = useState(false);
 
-  const { name, logo_props, access, archived_at, canCurrentUserArchivePage, getRedirectionLink } = page;
+  const {
+    name,
+    logo_props,
+    access,
+    archived_at,
+    canCurrentUserArchivePage,
+    canCurrentUserDeletePage,
+    getRedirectionLink,
+  } = page;
   const childIds = childIdsByParent[pageId] ?? [];
   const hasChildren = childIds.length > 0;
   const isArchived = !!archived_at;
@@ -205,16 +216,18 @@ const PageTreeRowContent = observer(function PageTreeRowContent(props: ContentPr
         <a href={getRedirectionLink()} className="max-w-full min-w-0 truncate text-primary" title={getPageName(name)}>
           {getPageName(name)}
         </a>
-        <button
-          type="button"
-          onClick={handleCreateChild}
-          disabled={isCreating}
-          className="flex size-5 shrink-0 items-center justify-center rounded text-tertiary opacity-0 transition-opacity group-hover:opacity-100 hover:bg-layer-transparent-hover hover:text-primary focus:opacity-100 disabled:cursor-progress disabled:opacity-100"
-          aria-label="New sub-page"
-          title="New sub-page"
-        >
-          <Plus className="size-3.5" />
-        </button>
+        {!isArchived && (
+          <button
+            type="button"
+            onClick={handleCreateChild}
+            disabled={isCreating}
+            className="flex size-5 shrink-0 items-center justify-center rounded text-tertiary opacity-0 transition-opacity group-hover:opacity-100 hover:bg-layer-transparent-hover hover:text-primary focus:opacity-100 disabled:cursor-progress disabled:opacity-100"
+            aria-label="New sub-page"
+            title="New sub-page"
+          >
+            <Plus className="size-3.5" />
+          </button>
+        )}
         {canCurrentUserArchivePage && (
           <button
             type="button"
@@ -230,6 +243,21 @@ const PageTreeRowContent = observer(function PageTreeRowContent(props: ContentPr
             )}
           </button>
         )}
+        {canCurrentUserDeletePage && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setDeleteModalOpen(true);
+            }}
+            className="flex size-5 shrink-0 items-center justify-center rounded text-tertiary opacity-0 transition-opacity group-hover:opacity-100 hover:bg-layer-transparent-hover hover:text-danger-primary focus:opacity-100"
+            aria-label="Delete page"
+            title="Delete page"
+          >
+            <TrashIcon className="size-3.5" color="currentColor" />
+          </button>
+        )}
         {/* Spacer fills the remaining row width so hover bg covers the whole row. */}
         <div className="grow" />
       </div>
@@ -242,6 +270,12 @@ const PageTreeRowContent = observer(function PageTreeRowContent(props: ContentPr
         content={archiveCopy}
         variant={isArchived ? "primary" : "danger"}
         primaryButtonText={archivePrimaryText}
+      />
+      <DeletePageModal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        page={page}
+        storeType={storeType}
       />
       {hasChildren && expanded && (
         <>
