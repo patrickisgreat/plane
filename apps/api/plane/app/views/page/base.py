@@ -382,11 +382,9 @@ class PageViewSet(BaseViewSet):
             project_pages__deleted_at__isnull=True,
         )
 
-        if page.archived_at is None:
-            return Response(
-                {"error": "The page should be archived before deleting"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        # fork: upstream gates delete behind "must be archived first"; we want a real
+        # delete affordance from the page tree, so the only remaining gate is the
+        # owner/admin permission check below.
 
         if page.owned_by_id != request.user.id and (
             not ProjectMember.objects.filter(
