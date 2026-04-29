@@ -42,7 +42,7 @@ import { useEditorFlagging } from "@/plane-web/hooks/use-editor-flagging";
 // store
 import type { TPageInstance } from "@/store/pages/base-page";
 // local imports
-import { usePageMentionHandler } from "../fork/page-mention";
+import { usePageMentionHandler, useSubPageSlashCommand } from "../fork/page-mention";
 import { PageContentLoader } from "../loaders/page-content-loader";
 import { PageEditorHeaderRoot } from "./header";
 import { PageContentBrowser } from "./summary";
@@ -100,6 +100,8 @@ export const PageEditorBody = observer(function PageEditorBody(props: Props) {
   const { getUserDetails } = useMember();
   // fork: live page-mention handler — render component reads page name from store reactively.
   const pageMentionHandler = usePageMentionHandler(storeType);
+  // fork: slash command that creates a sub-page of the current page and inserts a live link.
+  const additionalSlashCommands = useSubPageSlashCommand(page, storeType);
   // derived values
   const {
     id: pageId,
@@ -297,6 +299,7 @@ export const PageEditorBody = observer(function PageEditorBody(props: Props) {
               getMentionedEntityDetails: (id: string) => ({ display_name: getUserDetails(id)?.display_name ?? "" }),
             }}
             pageMentionHandler={pageMentionHandler}
+            additionalSlashCommands={additionalSlashCommands}
             updatePageProperties={updatePageProperties}
             realtimeConfig={realtimeConfig}
             serverHandler={serverHandler}

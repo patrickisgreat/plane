@@ -5,4 +5,5 @@
  */
 
 export { usePageMentionHandler } from "./use-page-mention-handler";
+export { useSubPageSlashCommand } from "./use-sub-page-slash-command";
 export { enqueuePendingChildLink, drainPendingChildLinksFor } from "./pending-child-link";

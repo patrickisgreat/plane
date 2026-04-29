@@ -12,7 +12,8 @@ import type { IEditorProps, TExtensions, TUserDetails } from "@/types";
 
 export type TDocumentEditorAdditionalExtensionsProps = Pick<
   IEditorProps,
-  "disabledExtensions" | "flaggedExtensions" | "fileHandler" | "extendedEditorProps"
+  // fork: forwards consumer-supplied slash command items into the SlashCommands extension.
+  "disabledExtensions" | "flaggedExtensions" | "fileHandler" | "extendedEditorProps" | "additionalSlashCommands"
 > & {
   isEditable: boolean;
   provider?: HocuspocusProvider;
@@ -27,8 +28,8 @@ export type TDocumentEditorAdditionalExtensionsRegistry = {
 const extensionRegistry: TDocumentEditorAdditionalExtensionsRegistry[] = [
   {
     isEnabled: (disabledExtensions) => !disabledExtensions.includes("slash-commands"),
-    getExtension: ({ disabledExtensions, flaggedExtensions }) =>
-      SlashCommands({ disabledExtensions, flaggedExtensions }),
+    getExtension: ({ disabledExtensions, flaggedExtensions, additionalSlashCommands }) =>
+      SlashCommands({ disabledExtensions, flaggedExtensions, additionalOptions: additionalSlashCommands }),
   },
 ];
 

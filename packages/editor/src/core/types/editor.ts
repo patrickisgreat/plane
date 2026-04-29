@@ -12,7 +12,7 @@ import type { NodeViewProps as TNodeViewProps } from "@tiptap/react";
 // plane imports
 import type { TCustomComponentsMetaData } from "@plane/utils";
 // extension types
-import type { TPageMentionHandler, TTextAlign } from "@/extensions";
+import type { TPageMentionHandler, TSlashCommandAdditionalOption, TTextAlign } from "@/extensions";
 // plane editor imports
 import type {
   IEditorPropsExtended,
@@ -66,6 +66,8 @@ export type TEditorCommands =
   | "attachment"
   | "emoji"
   | "external-embed"
+  // fork: "sub-page" creates a new child of the current page and inserts a live page-mention link.
+  | "sub-page"
   | TExtendedEditorCommands;
 
 export type TCommandExtraProps = {
@@ -179,6 +181,10 @@ export type IEditorProps = {
   // fork: live page-mention node (Notion-style sub-page link). Optional so callers that
   // don't surface the affordance keep working unchanged.
   pageMentionHandler?: TPageMentionHandler;
+  // fork: extra slash-command items the consumer wants to inject into the menu (e.g. the
+  // "Create sub-page" command, which needs MobX-store / router access the editor package
+  // can't reach on its own). Each item is built with closures over consumer state.
+  additionalSlashCommands?: TSlashCommandAdditionalOption[];
   onAssetChange?: (assets: TEditorAsset[]) => void;
   onEditorFocus?: () => void;
   onChange?: (json: object, html: string, { isMigrationUpdate }?: { isMigrationUpdate?: boolean }) => void;
