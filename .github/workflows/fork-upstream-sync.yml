@@ -1,0 +1,146 @@
+name: Fork — sync from upstream
+
+# Pulls makeplane/plane:preview into our fork by opening a PR. Never auto-merges —
+# the user reviews. Clean merges produce a one-click PR; conflicts produce a PR with
+# conflict markers and a body listing the affected files.
+#
+# Branch naming is per-day, so a same-day re-run force-pushes onto the existing branch
+# (and updates the existing PR's diff automatically).
+#
+# Triggers:
+#   - schedule: every day at 06:00 UTC
+#   - workflow_dispatch: manual run from the Actions tab
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+    inputs:
+      upstream_ref:
+        description: "Upstream ref to sync from (default: preview)"
+        required: false
+        default: "preview"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout fork preview
+        uses: actions/checkout@v4
+        with:
+          ref: preview
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add upstream remote and fetch
+        run: |
+          git remote add upstream https://github.com/makeplane/plane.git
+          git fetch upstream --tags
+
+      - name: Determine sync state
+        id: state
+        run: |
+          UPSTREAM_REF="${{ github.event.inputs.upstream_ref || 'preview' }}"
+          DATE=$(date -u +%Y-%m-%d)
+          BRANCH="upstream-sync/${DATE}"
+          BEHIND=$(git rev-list --count "HEAD..upstream/${UPSTREAM_REF}")
+          {
+            echo "upstream_ref=${UPSTREAM_REF}"
+            echo "branch=${BRANCH}"
+            echo "behind=${BEHIND}"
+          } >> "$GITHUB_OUTPUT"
+          echo "Fork is ${BEHIND} commit(s) behind upstream/${UPSTREAM_REF}."
+
+      - name: Up to date — exit
+        if: steps.state.outputs.behind == '0'
+        run: |
+          echo "## Up to date" >> "$GITHUB_STEP_SUMMARY"
+          echo "Fork already current with upstream/${{ steps.state.outputs.upstream_ref }}." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Create sync branch
+        if: steps.state.outputs.behind != '0'
+        run: |
+          git checkout -B "${{ steps.state.outputs.branch }}"
+
+      - name: Attempt merge
+        if: steps.state.outputs.behind != '0'
+        id: merge
+        continue-on-error: true
+        run: |
+          set +e
+          git merge --no-ff --no-edit "upstream/${{ steps.state.outputs.upstream_ref }}"
+          STATUS=$?
+          set -e
+          if [ "$STATUS" -ne 0 ]; then
+            echo "clean=false" >> "$GITHUB_OUTPUT"
+            CONFLICTS=$(git diff --name-only --diff-filter=U)
+            {
+              echo "conflicts<<CONFLICTS_EOF"
+              echo "$CONFLICTS"
+              echo "CONFLICTS_EOF"
+            } >> "$GITHUB_OUTPUT"
+            git add -A
+            git commit -m "WIP: merge upstream/${{ steps.state.outputs.upstream_ref }} (conflicts to resolve)" --no-verify
+          else
+            echo "clean=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Push sync branch
+        if: steps.state.outputs.behind != '0'
+        run: |
+          git push origin "${{ steps.state.outputs.branch }}" --force-with-lease
+
+      - name: Open or update PR
+        if: steps.state.outputs.behind != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: ${{ steps.state.outputs.branch }}
+          UPSTREAM_REF: ${{ steps.state.outputs.upstream_ref }}
+          CLEAN: ${{ steps.merge.outputs.clean }}
+          CONFLICTS: ${{ steps.merge.outputs.conflicts }}
+        run: |
+          DATE_HUMAN=$(date -u +%Y-%m-%d)
+          if [ "$CLEAN" = "true" ]; then
+            TITLE="chore: sync upstream/${UPSTREAM_REF} (${DATE_HUMAN})"
+            BODY=$(printf '%s\n' \
+              "Automated sync from \`makeplane/plane:${UPSTREAM_REF}\`. Merged cleanly." \
+              "" \
+              "Review the diff and merge — the build pipeline will rebuild + push images automatically once this lands on \`preview\`.")
+          else
+            TITLE="chore: sync upstream/${UPSTREAM_REF} (${DATE_HUMAN}) — CONFLICTS"
+            BODY=$(printf '%s\n' \
+              "Automated sync from \`makeplane/plane:${UPSTREAM_REF}\` hit **merge conflicts**. The branch contains the merge commit with conflict markers committed in place." \
+              "" \
+              "Resolve locally:" \
+              "" \
+              '```' \
+              "git fetch origin" \
+              "git checkout ${BRANCH}" \
+              "# resolve conflicts in the files below" \
+              "git add -A && git commit --amend --no-edit" \
+              "git push --force-with-lease" \
+              '```' \
+              "" \
+              "## Conflicted files" \
+              '```' \
+              "${CONFLICTS}" \
+              '```' \
+              "" \
+              "Once resolved, this PR can merge normally and the build pipeline will rebuild images.")
+          fi
+          # Update existing PR body if one exists, otherwise create.
+          PR_NUMBER=$(gh pr list --head "$BRANCH" --base preview --json number --jq '.[0].number // empty')
+          if [ -n "$PR_NUMBER" ]; then
+            gh pr edit "$PR_NUMBER" --title "$TITLE" --body "$BODY"
+          else
+            gh pr create --base preview --head "$BRANCH" --title "$TITLE" --body "$BODY"
+          fi

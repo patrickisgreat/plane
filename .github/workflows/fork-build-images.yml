@@ -1,0 +1,93 @@
+name: Fork — build & push images
+
+# Builds the three fork-modified service images (web, live, api) and pushes them to
+# GitHub Container Registry whenever `preview` advances. The droplet pulls from there.
+#
+# Triggers:
+#   - push to `preview`           — auto on PR merge
+#   - workflow_dispatch           — manual rebuild from the Actions tab
+
+on:
+  push:
+    branches:
+      - preview
+  workflow_dispatch:
+
+# A second commit while a previous build is mid-flight cancels the older run — we only
+# care about the latest preview tip.
+concurrency:
+  group: fork-build-images-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: web
+            context: .
+            file: apps/web/Dockerfile.web
+          - service: live
+            context: .
+            file: apps/live/Dockerfile.live
+          - service: api
+            context: apps/api
+            file: apps/api/Dockerfile.api
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compute tags
+        id: tags
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          DATE=$(date -u +%Y%m%d)
+          REPO_OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          IMAGE="ghcr.io/${REPO_OWNER_LC}/plane-${{ matrix.service }}"
+          {
+            echo "sha_tag=${IMAGE}:preview-${SHORT_SHA}"
+            echo "date_tag=${IMAGE}:fork-${DATE}-${SHORT_SHA}"
+            echo "latest_tag=${IMAGE}:latest"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ steps.tags.outputs.sha_tag }}
+            ${{ steps.tags.outputs.date_tag }}
+            ${{ steps.tags.outputs.latest_tag }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+      - name: Summary
+        run: |
+          {
+            echo "### Pushed \`${{ matrix.service }}\`"
+            echo ""
+            echo "- ${{ steps.tags.outputs.sha_tag }}"
+            echo "- ${{ steps.tags.outputs.date_tag }}"
+            echo "- ${{ steps.tags.outputs.latest_tag }}"
+          } >> "$GITHUB_STEP_SUMMARY"
