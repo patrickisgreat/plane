@@ -6,14 +6,18 @@
 
 import { useState } from "react";
 import { observer } from "mobx-react";
+import { useParams } from "next/navigation";
 import { ChevronRight, Plus } from "lucide-react";
 import { setToast, TOAST_TYPE } from "@plane/propel/toast";
 import { getPageName } from "@plane/utils";
+import { useAppRouter } from "@/hooks/use-app-router";
 // plane web hooks
 import type { EPageStoreType } from "@/plane-web/hooks/store";
 import { usePageStore } from "@/plane-web/hooks/store";
 // store types
 import type { TPageInstance } from "@/store/pages/base-page";
+// fork: queue a page-mention insert so the parent's editor drains it next time it mounts.
+import { enqueuePendingChildLink } from "../page-mention";
 // local imports
 import { usePageAncestors } from "./use-page-ancestors";
 
@@ -37,6 +41,8 @@ export const PageBreadcrumb = observer(function PageBreadcrumb(props: Props) {
   const { page, storeType } = props;
   const ancestors = usePageAncestors(storeType, page.id);
   const { createPage } = usePageStore(storeType);
+  const router = useAppRouter();
+  const params = useParams();
   const [isCreating, setIsCreating] = useState(false);
 
   const handleCreateChild = async () => {
@@ -46,25 +52,16 @@ export const PageBreadcrumb = observer(function PageBreadcrumb(props: Props) {
       const newPage = await createPage({ name: "", parent: page.id, access: page.access });
       if (!newPage?.id) return;
 
-      const editor = page.editor.editorRef;
-      let insertedIntoBody = false;
-      if (editor) {
-        // Insert a live page-mention node directly via JSON spec rather than HTML. Going
-        // through HTML lets Tiptap's CustomLink mark claim the <a> first; building the
-        // ProseMirror node directly bypasses parsing and guarantees the NodeView mounts.
-        editor.insertContentAtPosition(0, {
-          type: "paragraph",
-          content: [{ type: "pageMention", attrs: { pageId: newPage.id } }],
-        });
-        insertedIntoBody = true;
+      const workspaceSlug = params.workspaceSlug?.toString();
+      const projectId = params.projectId?.toString();
+      if (workspaceSlug && projectId && page.id) {
+        // Navigate the user to the new child so they can rename it via the title input.
+        // The parent's body link is added when the parent's editor next mounts (drains
+        // the queue) — page-mention atom nodes can't be renamed inline, so previously
+        // leaving the user on the parent left them with an unrenameable "Untitled" link.
+        enqueuePendingChildLink({ parentId: page.id, childId: newPage.id });
+        router.push(`/${workspaceSlug}/projects/${projectId}/pages/${newPage.id}`);
       }
-      setToast({
-        type: TOAST_TYPE.SUCCESS,
-        title: "Sub-page created",
-        message: insertedIntoBody
-          ? "A link to the new page was added to the top of this page."
-          : "Open it from the page tree on the left.",
-      });
     } catch (error) {
       const apiMessage = extractApiErrorMessage(error);
       setToast({

@@ -135,12 +135,13 @@ const PageTreeRowContent = observer(function PageTreeRowContent(props: ContentPr
       const workspaceSlug = params.workspaceSlug?.toString();
       const projectId = params.projectId?.toString();
       if (newPage?.id && workspaceSlug && projectId) {
-        // Enqueue a page-mention insert so the parent's editor (which mounts after
-        // navigation) can drain it and add the live link. Then land the user on the
-        // PARENT, not the child — they see the new link in context, click it to dive
-        // into the child when they're ready to type a title.
+        // Enqueue a page-mention insert so the parent's editor drains it and adds the
+        // live link the next time it mounts. Land the user on the CHILD: page-mention
+        // nodes are atomic and can't be renamed inline, so leaving them on the parent
+        // with an unrenameable "Untitled" link was a dead end. The title input on the
+        // child page gives them an obvious place to type the name.
         enqueuePendingChildLink({ parentId: pageId, childId: newPage.id });
-        router.push(`/${workspaceSlug}/projects/${projectId}/pages/${pageId}`);
+        router.push(`/${workspaceSlug}/projects/${projectId}/pages/${newPage.id}`);
       }
     } catch (error) {
       const apiMessage = extractApiErrorMessage(error);
