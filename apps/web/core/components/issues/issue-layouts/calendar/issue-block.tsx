@@ -58,7 +58,8 @@ export const CalendarIssueBlock = observer(
     const projectIdentifier = getProjectIdentifierById(issue?.project_id);
 
     // handlers
-    const handleIssuePeekOverview = (issue: TIssue) => handleRedirection(workspaceSlug.toString(), issue, isMobile);
+    const handleIssuePeekOverview = (issueToPeek: TIssue) =>
+      handleRedirection(workspaceSlug.toString(), issueToPeek, isMobile);
 
     useOutsideClickDetector(menuActionRef, () => setIsMenuActive(false));
 
@@ -68,14 +69,28 @@ export const CalendarIssueBlock = observer(
         className={`w-full cursor-pointer rounded-sm p-1 text-placeholder hover:bg-layer-1 ${
           isMenuActive ? "bg-layer-1-active text-primary" : "text-secondary"
         }`}
+        // Not a real <button>: this node is handed to the quick-actions menu as a custom
+        // trigger, which renders its own interactive wrapper — nested buttons break.
+        // oxlint-disable-next-line jsx_a11y/prefer-tag-over-role
+        role="button"
+        tabIndex={0}
+        aria-label="Work item quick actions"
         onClick={() => setIsMenuActive(!isMenuActive)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setIsMenuActive(!isMenuActive);
+          }
+        }}
       >
         <MoreHorizontal className="h-3.5 w-3.5" />
       </div>
     );
 
     const isMenuActionRefAboveScreenBottom =
-      menuActionRef?.current && menuActionRef?.current?.getBoundingClientRect().bottom < window.innerHeight - 220;
+      typeof window !== "undefined" &&
+      menuActionRef?.current &&
+      menuActionRef?.current?.getBoundingClientRect().bottom < window.innerHeight - 220;
 
     const placement = isMenuActionRefAboveScreenBottom ? "bottom-end" : "top-end";
 
@@ -141,10 +156,14 @@ export const CalendarIssueBlock = observer(
                       "hidden group-hover/calendar-block:block": !isMobile,
                       block: isMenuActive,
                     })}
+                    // Bubbling barrier: keeps quick-action interactions from triggering
+                    // the surrounding work-item link.
+                    role="presentation"
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
                     }}
+                    onKeyDown={(e) => e.stopPropagation()}
                   >
                     {quickActions({
                       issue,

@@ -196,6 +196,8 @@ export const PageEditorBody = observer(function PageEditorBody(props: Props) {
   );
 
   const realtimeConfig: TRealtimeConfig | undefined = useMemo(() => {
+    // No WebSocket URL can be built outside the browser (build-time shell render).
+    if (typeof window === "undefined") return undefined;
     // Construct the WebSocket Collaboration URL
     try {
       const LIVE_SERVER_BASE_URL = LIVE_BASE_URL?.trim() || window.location.origin;
