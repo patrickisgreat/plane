@@ -12,7 +12,9 @@ import type { TPageNavigationTabs } from "@plane/types";
 import { cn } from "@plane/utils";
 // plane web hooks
 import type { EPageStoreType } from "@/hooks/store";
+import { usePageStore } from "@/hooks/store";
 // local imports
+import { PageSearchResults } from "./page-search-results";
 import { PageTreeRow } from "./page-tree-row";
 import { usePageTree } from "./use-page-tree";
 import { isPageTreeDragData, PAGE_TREE_DRAG_TYPE, usePageTreeDragDrop } from "./use-page-tree-drag-drop";
@@ -24,6 +26,7 @@ type Props = {
 
 export const PageTreeRoot = observer(function PageTreeRoot(props: Props) {
   const { pageType, storeType } = props;
+  const { filters } = usePageStore(storeType);
   const { rootIds, childIdsByParent } = usePageTree(storeType, pageType);
   const reparent = usePageTreeDragDrop(storeType);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
@@ -58,6 +61,10 @@ export const PageTreeRoot = observer(function PageTreeRoot(props: Props) {
       },
     });
   }, [reparent]);
+
+  // An active search replaces the tree with a flat result list (titles + body text) —
+  // matching sub-pages must surface even when their ancestors don't match.
+  if (filters.searchQuery.trim().length > 0) return <PageSearchResults pageType={pageType} storeType={storeType} />;
 
   if (!rootIds || rootIds.length === 0) return null;
 

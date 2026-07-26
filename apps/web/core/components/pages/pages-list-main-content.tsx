@@ -33,7 +33,7 @@ export const PagesListMainContent = observer(function PagesListMainContent(props
   const { t } = useTranslation();
   // store hooks
   const { currentProjectDetails } = useProject();
-  const { isAnyPageAvailable, getCurrentProjectFilteredPageIdsByTab, getCurrentProjectPageIdsByTab, loader } =
+  const { isAnyPageAvailable, getCurrentProjectFilteredPageIdsByTab, getCurrentProjectPageIdsByTab, loader, filters } =
     usePageStore(storeType);
   const { allowPermissions } = useUserPermissions();
   const { createPage } = usePageStore(EPageStoreType.PROJECT);
@@ -61,7 +61,7 @@ export const PagesListMainContent = observer(function PagesListMainContent(props
     await createPage(payload)
       .then((res) => {
         const pageId = `/${workspaceSlug}/projects/${currentProjectDetails?.id}/pages/${res?.id}`;
-        router.push(pageId);
+        return router.push(pageId);
       })
       .catch((err) => {
         setToast({
@@ -141,7 +141,9 @@ export const PagesListMainContent = observer(function PagesListMainContent(props
       );
   }
   // if no pages match the filter criteria
-  if (filteredPageIds?.length === 0)
+  // fork: while a search query is active the tree renders its own result list (which also
+  // covers body-text matches the client can't see), so let children handle the empty state.
+  if (filteredPageIds?.length === 0 && !filters.searchQuery.trim())
     return (
       <EmptyStateDetailed
         assetKey="search"
