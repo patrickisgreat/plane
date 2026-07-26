@@ -169,12 +169,15 @@ export class ProjectPageStore implements IProjectPageStore {
 
     // helps to filter pages based on the pageType
     const pagesByType = filterPagesByPageType(pageType, Object.values(this?.data || {}));
+    const searchQuery = this.filters.searchQuery.toLowerCase();
     let filteredPages = pagesByType.filter(
       (p) =>
         p.project_ids?.includes(projectId) &&
-        // fork: store now holds the full tree, but the flat-list view still wants roots only.
-        !p.parent &&
-        getPageName(p.name).toLowerCase().includes(this.filters.searchQuery.toLowerCase()) &&
+        // fork: store now holds the full tree. At rest the tree view wants roots only, but an
+        // active search must match sub-pages too — a child whose title matches would otherwise
+        // vanish with its non-matching root.
+        (searchQuery ? true : !p.parent) &&
+        getPageName(p.name).toLowerCase().includes(searchQuery) &&
         shouldFilterPage(p, this.filters.filters)
     );
     filteredPages = orderPages(filteredPages, this.filters.sortKey, this.filters.sortBy);
