@@ -6,6 +6,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
+import { autoScrollForElements } from "@atlaskit/pragmatic-drag-and-drop-auto-scroll/element";
 import { dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import type { TPageNavigationTabs } from "@plane/types";
 import { cn } from "@plane/utils";
@@ -25,8 +26,20 @@ export const PageTreeRoot = observer(function PageTreeRoot(props: Props) {
   const { pageType, storeType } = props;
   const { rootIds, childIdsByParent } = usePageTree(storeType, pageType);
   const reparent = usePageTreeDragDrop(storeType);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const rootZoneRef = useRef<HTMLDivElement | null>(null);
   const [isRootDropTarget, setIsRootDropTarget] = useState(false);
+
+  // Keep the tree scrollable mid-drag: nudge the container when the pointer nears its edges,
+  // so any row (and the root drop zone at the bottom) stays reachable in long trees.
+  useEffect(() => {
+    const element = scrollContainerRef.current;
+    if (!element) return;
+    return autoScrollForElements({
+      element,
+      canScroll: ({ source }) => isPageTreeDragData(source.data),
+    });
+  }, []);
 
   useEffect(() => {
     const element = rootZoneRef.current;
@@ -49,7 +62,9 @@ export const PageTreeRoot = observer(function PageTreeRoot(props: Props) {
   if (!rootIds || rootIds.length === 0) return null;
 
   return (
-    <div className="flex flex-col gap-0.5 py-1">
+    // h-full + overflow-y-auto: the wrapper above clips at the viewport, so the tree must own
+    // its scrolling or long expanded trees become unreachable below the fold.
+    <div ref={scrollContainerRef} className="flex h-full flex-col gap-0.5 overflow-y-auto py-1">
       {rootIds.map((pageId) => (
         <PageTreeRow key={pageId} pageId={pageId} depth={0} childIdsByParent={childIdsByParent} storeType={storeType} />
       ))}
@@ -58,7 +73,7 @@ export const PageTreeRoot = observer(function PageTreeRoot(props: Props) {
           rest. */}
       <div
         ref={rootZoneRef}
-        className={cn("mt-1 h-8 rounded-sm border border-dashed border-transparent text-12 text-tertiary", {
+        className={cn("mt-1 h-8 shrink-0 rounded-sm border border-dashed border-transparent text-12 text-tertiary", {
           "border-accent-primary bg-layer-transparent-hover": isRootDropTarget,
         })}
         aria-hidden
