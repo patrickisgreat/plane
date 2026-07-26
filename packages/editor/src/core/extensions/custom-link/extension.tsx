@@ -94,6 +94,30 @@ export type CustomLinkStorage = {
   isBubbleMenuOpen: boolean;
 };
 
+// Blocked link protocols — browsers execute these in the page's security context.
+const BLOCKED_LINK_PROTOCOLS = ["javascript:", "data:", "vbscript:"];
+
+/**
+ * Returns true if the raw href value contains a dangerous protocol.
+ *
+ * Per the WHATWG URL spec, browsers strip ASCII Tab (U+0009), LF (U+000A), and
+ * CR (U+000D) from URL strings during parsing, and strip leading C0 controls /
+ * whitespace before the scheme. A naive `startsWith("javascript:")` check is
+ * therefore bypassable with a whitespace prefix (e.g. `"\tjavascript:alert(1)"`).
+ * We replicate that normalization before our protocol check (GHSA-v2vv-7wq3-8w2j).
+ */
+function isDangerousHref(rawHref: string): boolean {
+  const normalized = rawHref
+    .replace(/[\t\n\r]/g, "") // strip Tab/LF/CR (stripped anywhere by WHATWG parser)
+    // Strip leading C0 controls + space (WHATWG strips all leading code points <= U+0020).
+    // Written with escapes: the class previously held raw control bytes, which are invisible
+    // in review and tripped CodeQL's overlapping-range check.
+    // oxlint-disable-next-line no-control-regex -- matching control characters is the point
+    .replace(/^[\u0000-\u0020]+/, "")
+    .toLowerCase();
+  return BLOCKED_LINK_PROTOCOLS.some((protocol) => normalized.startsWith(protocol));
+}
+
 export const CustomLinkExtension = Mark.create<LinkOptions, CustomLinkStorage>({
   name: CORE_EXTENSIONS.CUSTOM_LINK,
 
@@ -161,8 +185,8 @@ export const CustomLinkExtension = Mark.create<LinkOptions, CustomLinkStorage>({
           if (typeof node === "string") {
             return null;
           }
-          const href = node.getAttribute("href")?.toLowerCase() || "";
-          if (href.startsWith("javascript:") || href.startsWith("data:") || href.startsWith("vbscript:")) {
+          const href = node.getAttribute("href") || "";
+          if (isDangerousHref(href)) {
             return false;
           }
           return {};
@@ -172,8 +196,8 @@ export const CustomLinkExtension = Mark.create<LinkOptions, CustomLinkStorage>({
   },
 
   renderHTML({ HTMLAttributes }) {
-    const href = HTMLAttributes.href?.toLowerCase() || "";
-    if (href.startsWith("javascript:") || href.startsWith("data:") || href.startsWith("vbscript:")) {
+    const href = (HTMLAttributes.href as string) || "";
+    if (isDangerousHref(href)) {
       return ["a", mergeAttributes(this.options.HTMLAttributes, { ...HTMLAttributes, href: "" }), 0];
     }
     return ["a", mergeAttributes(this.options.HTMLAttributes, HTMLAttributes), 0];

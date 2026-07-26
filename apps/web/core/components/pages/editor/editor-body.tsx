@@ -35,10 +35,9 @@ import { useParseEditorContent } from "@/hooks/use-parse-editor-content";
 // plane web imports
 import type { TCustomEventHandlers } from "@/hooks/use-realtime-page-events";
 import { useRealtimePageEvents } from "@/hooks/use-realtime-page-events";
-import { EditorAIMenu } from "@/plane-web/components/pages";
-import type { TExtendedEditorExtensionsConfig } from "@/plane-web/hooks/pages";
-import type { EPageStoreType } from "@/plane-web/hooks/store";
-import { useEditorFlagging } from "@/plane-web/hooks/use-editor-flagging";
+import type { TExtendedEditorExtensionsConfig } from "@/hooks/pages";
+import type { EPageStoreType } from "@/hooks/store";
+import { useEditorFlagging } from "@/hooks/use-editor-flagging";
 // store
 import type { TPageInstance } from "@/store/pages/base-page";
 // local imports
@@ -47,6 +46,7 @@ import { useWikiLinkHandler } from "../fork/wiki-link";
 import { PageContentLoader } from "../loaders/page-content-loader";
 import { PageEditorHeaderRoot } from "./header";
 import { PageContentBrowser } from "./summary";
+import { EditorAIMenu } from "./ai";
 
 export type TEditorBodyConfig = {
   fileHandler: TFileHandler;
@@ -196,6 +196,8 @@ export const PageEditorBody = observer(function PageEditorBody(props: Props) {
   );
 
   const realtimeConfig: TRealtimeConfig | undefined = useMemo(() => {
+    // No WebSocket URL can be built outside the browser (build-time shell render).
+    if (typeof window === "undefined") return undefined;
     // Construct the WebSocket Collaboration URL
     try {
       const LIVE_SERVER_BASE_URL = LIVE_BASE_URL?.trim() || window.location.origin;
@@ -255,7 +257,7 @@ export const PageEditorBody = observer(function PageEditorBody(props: Props) {
                 {/* Cannot be a real <button>: PageContentBrowser renders interactive <button>s for the headings, and nested interactive elements break SSR hydration. Use a div with role=button + keyboard handler. */}
                 <div
                   className="max-h-[50vh] !cursor-pointer overflow-hidden"
-                  // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
+                  // oxlint-disable-next-line jsx_a11y/prefer-tag-over-role
                   role="button"
                   tabIndex={0}
                   aria-label={t("page_navigation_pane.outline_floating_button")}
@@ -298,7 +300,8 @@ export const PageEditorBody = observer(function PageEditorBody(props: Props) {
                 if (!res) throw new Error("Failed in fetching mentions");
                 return res;
               },
-              renderComponent: (mentionProps) => <EditorMentionsRoot {...mentionProps} />,
+              // oxlint-disable-next-line no-shadow
+              renderComponent: (props) => <EditorMentionsRoot {...props} />,
               getMentionedEntityDetails: (id: string) => ({ display_name: getUserDetails(id)?.display_name ?? "" }),
             }}
             pageMentionHandler={pageMentionHandler}

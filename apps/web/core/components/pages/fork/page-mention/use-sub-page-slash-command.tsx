@@ -9,8 +9,8 @@ import { FilePlus2 } from "lucide-react";
 import type { TEditorCommands, TSlashCommandAdditionalOption } from "@plane/editor";
 import { setToast, TOAST_TYPE } from "@plane/propel/toast";
 // plane web hooks
-import type { EPageStoreType } from "@/plane-web/hooks/store";
-import { usePageStore } from "@/plane-web/hooks/store";
+import type { EPageStoreType } from "@/hooks/store";
+import { usePageStore } from "@/hooks/store";
 // store types
 import type { TPageInstance } from "@/store/pages/base-page";
 
