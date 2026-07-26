@@ -12,8 +12,8 @@ import { setToast, TOAST_TYPE } from "@plane/propel/toast";
 import { getPageName } from "@plane/utils";
 import { useAppRouter } from "@/hooks/use-app-router";
 // plane web hooks
-import type { EPageStoreType } from "@/plane-web/hooks/store";
-import { usePageStore } from "@/plane-web/hooks/store";
+import type { EPageStoreType } from "@/hooks/store";
+import { usePageStore } from "@/hooks/store";
 // store types
 import type { TPageInstance } from "@/store/pages/base-page";
 // fork: queue a page-mention insert so the parent's editor drains it next time it mounts.

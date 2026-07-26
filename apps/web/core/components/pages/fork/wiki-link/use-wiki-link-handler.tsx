@@ -9,8 +9,8 @@ import { FileText } from "lucide-react";
 import type { TWikiLinkHandler, TWikiLinkSuggestion } from "@plane/editor";
 import { getPageName } from "@plane/utils";
 // plane web hooks
-import type { EPageStoreType } from "@/plane-web/hooks/store";
-import { usePageStore } from "@/plane-web/hooks/store";
+import type { EPageStoreType } from "@/hooks/store";
+import { usePageStore } from "@/hooks/store";
 // store types
 import type { TPageInstance } from "@/store/pages/base-page";
 

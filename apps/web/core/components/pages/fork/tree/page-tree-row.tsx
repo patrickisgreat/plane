@@ -23,8 +23,8 @@ import { DeletePageModal } from "@/components/pages/modals/delete-page-modal";
 import { enqueuePendingChildLink } from "../page-mention";
 import { isPageTreeDragData, PAGE_TREE_DRAG_TYPE, usePageTreeDragDrop } from "./use-page-tree-drag-drop";
 // plane web hooks
-import type { EPageStoreType } from "@/plane-web/hooks/store";
-import { usePage, usePageStore } from "@/plane-web/hooks/store";
+import type { EPageStoreType } from "@/hooks/store";
+import { usePage, usePageStore } from "@/hooks/store";
 // store types
 import type { TPageInstance } from "@/store/pages/base-page";
 

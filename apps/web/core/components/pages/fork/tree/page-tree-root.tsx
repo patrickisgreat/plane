@@ -10,7 +10,7 @@ import { dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element
 import type { TPageNavigationTabs } from "@plane/types";
 import { cn } from "@plane/utils";
 // plane web hooks
-import type { EPageStoreType } from "@/plane-web/hooks/store";
+import type { EPageStoreType } from "@/hooks/store";
 // local imports
 import { PageTreeRow } from "./page-tree-row";
 import { usePageTree } from "./use-page-tree";

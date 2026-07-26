@@ -8,8 +8,8 @@ import { useCallback } from "react";
 import { runInAction } from "mobx";
 import { TOAST_TYPE, setToast } from "@plane/propel/toast";
 // plane web hooks
-import type { EPageStoreType } from "@/plane-web/hooks/store";
-import { usePageStore } from "@/plane-web/hooks/store";
+import type { EPageStoreType } from "@/hooks/store";
+import { usePageStore } from "@/hooks/store";
 // store types
 import type { TPageInstance } from "@/store/pages/base-page";
 

@@ -9,8 +9,8 @@ import { observer } from "mobx-react";
 import type { TPageMentionDetails, TPageMentionHandler } from "@plane/editor";
 import { cn, getPageName } from "@plane/utils";
 // plane web hooks
-import type { EPageStoreType } from "@/plane-web/hooks/store";
-import { usePageStore } from "@/plane-web/hooks/store";
+import type { EPageStoreType } from "@/hooks/store";
+import { usePageStore } from "@/hooks/store";
 
 const PageMentionLink = observer(function PageMentionLink({
   pageId,

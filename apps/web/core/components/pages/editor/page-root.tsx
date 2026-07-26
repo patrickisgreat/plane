@@ -11,11 +11,9 @@ import type { CollaborationState, EditorRefApi } from "@plane/editor";
 import type { TDocumentPayload, TPage, TPageVersion, TWebhookConnectionQueryParams } from "@plane/types";
 // hooks
 import { usePageFallback } from "@/hooks/use-page-fallback";
-// plane web import
 import type { PageUpdateHandler, TCustomEventHandlers } from "@/hooks/use-realtime-page-events";
-import { PageModals } from "@/plane-web/components/pages";
-import { usePagesPaneExtensions, useExtendedEditorProps } from "@/plane-web/hooks/pages";
-import type { EPageStoreType } from "@/plane-web/hooks/store";
+import { usePagesPaneExtensions, useExtendedEditorProps } from "@/hooks/pages";
+import type { EPageStoreType } from "@/hooks/store";
 // store
 import type { TPageInstance } from "@/store/pages/base-page";
 // local imports
@@ -96,9 +94,8 @@ export const PageRoot = observer(function PageRoot(props: TPageRootProps) {
   );
 
   useEffect(() => {
-    setTimeout(() => {
-      setEditorRef(editorRef.current);
-    }, 0);
+    const timer = setTimeout(() => setEditorRef(editorRef.current), 0);
+    return () => clearTimeout(timer);
   }, [isContentEditable, setEditorRef]);
 
   // fork: drain any page-mention inserts the tree-row + button enqueued before navigating
@@ -230,7 +227,7 @@ export const PageRoot = observer(function PageRoot(props: TPageRootProps) {
         }}
         extensions={navigationPaneExtensions}
       />
-      <PageModals page={page} storeType={storeType} />
+      {/* fork: dev-only editor diagnostics overlay */}
       {isEditorDiagnosticsEnabled && (
         <PageEditorDiagnosticsOverlay
           collaborationState={collaborationState}
