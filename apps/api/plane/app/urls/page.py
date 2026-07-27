@@ -11,6 +11,7 @@ from plane.app.views import (
     PagesDescriptionViewSet,
     PageVersionEndpoint,
     PageDuplicateEndpoint,
+    ProjectPageSearchEndpoint,  # fork: title + body search
 )
 
 urlpatterns = [
@@ -23,6 +24,12 @@ urlpatterns = [
         "workspaces/<str:slug>/projects/<uuid:project_id>/pages/",
         PageViewSet.as_view({"get": "list", "post": "create"}),
         name="project-pages",
+    ),
+    # fork: search page titles + body text
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/pages/search/",
+        ProjectPageSearchEndpoint.as_view(),
+        name="project-pages-search",
     ),
     path(
         "workspaces/<str:slug>/projects/<uuid:project_id>/pages/<uuid:page_id>/",

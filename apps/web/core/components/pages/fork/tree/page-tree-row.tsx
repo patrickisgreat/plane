@@ -7,6 +7,8 @@
 import { useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "next/navigation";
+import { attachInstruction, extractInstruction } from "@atlaskit/pragmatic-drag-and-drop-hitbox/tree-item";
+import type { Instruction } from "@atlaskit/pragmatic-drag-and-drop-hitbox/tree-item";
 import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
 import { draggable, dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import { ArchiveRestoreIcon, ChevronDown, ChevronRight, GripVertical, Plus } from "lucide-react";
@@ -71,12 +73,13 @@ const PageTreeRowContent = observer(function PageTreeRowContent(props: ContentPr
   const [isArchiving, setIsArchiving] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [isDropTarget, setIsDropTarget] = useState(false);
+  const [dropInstruction, setDropInstruction] = useState<Instruction["type"] | null>(null);
 
   const {
     name,
     logo_props,
     access,
+    parent,
     archived_at,
     canCurrentUserArchivePage,
     canCurrentUserDeletePage,
@@ -106,22 +109,48 @@ const PageTreeRowContent = observer(function PageTreeRowContent(props: ContentPr
           // Don't let a row accept a drop from itself.
           return source.data.pageId !== pageId;
         },
-        getData: () => ({ type: PAGE_TREE_DRAG_TYPE, pageId }),
-        onDragEnter: () => setIsDropTarget(true),
-        onDragLeave: () => setIsDropTarget(false),
-        onDrop: ({ source }) => {
-          setIsDropTarget(false);
+        // The tree-item hitbox splits the row into zones: top/bottom edges mean "become my
+        // sibling", the middle means "become my child". Sibling drops on a root-level row are
+        // what let a nested page climb back to the top level. `reparent` (the indent-chooser
+        // zone) is blocked — we don't support manual ordering, so it has no meaning here.
+        getData: ({ input, element: el }) =>
+          attachInstruction(
+            { type: PAGE_TREE_DRAG_TYPE, pageId },
+            {
+              input,
+              element: el,
+              currentLevel: depth,
+              indentPerLevel: INDENT_PER_LEVEL,
+              mode: hasChildren && expanded ? "expanded" : "standard",
+              block: ["reparent"],
+            }
+          ),
+        onDrag: ({ self }) => {
+          const instruction = extractInstruction(self.data);
+          setDropInstruction(instruction && instruction.type !== "instruction-blocked" ? instruction.type : null);
+        },
+        onDragLeave: () => setDropInstruction(null),
+        onDrop: ({ source, self }) => {
+          setDropInstruction(null);
           if (!isPageTreeDragData(source.data)) return;
           if (source.data.pageId === pageId) return;
-          // Make this row the new parent of the dragged page. The hook handles
-          // cycle protection + optimistic update + rollback toast.
-          void reparent(source.data.pageId, pageId);
-          // Auto-expand so the user immediately sees the dropped child.
-          setExpanded(true);
+          const instruction = extractInstruction(self.data);
+          if (!instruction || instruction.type === "instruction-blocked") return;
+          if (instruction.type === "make-child") {
+            // Make this row the new parent of the dragged page. The hook handles
+            // cycle protection + optimistic update + rollback toast.
+            void reparent(source.data.pageId, pageId);
+            // Auto-expand so the user immediately sees the dropped child.
+            setExpanded(true);
+          } else {
+            // Edge drop: the dragged page becomes a sibling of this row — for a root-level
+            // row that means promoting it to the project root (parent = null).
+            void reparent(source.data.pageId, parent ?? null);
+          }
         },
       })
     );
-  }, [pageId, reparent]);
+  }, [pageId, reparent, depth, hasChildren, expanded, parent]);
 
   const handleCreateChild = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -184,12 +213,28 @@ const PageTreeRowContent = observer(function PageTreeRowContent(props: ContentPr
     <>
       <div
         ref={rowRef}
-        className={cn("group flex h-8 items-center gap-1 rounded-sm px-1 text-13 hover:bg-layer-transparent-hover", {
-          "opacity-50": isDragging,
-          "ring-accent-primary bg-layer-transparent-hover ring-2 ring-inset": isDropTarget,
-        })}
+        className={cn(
+          "group relative flex h-8 shrink-0 items-center gap-1 rounded-sm px-1 text-13 hover:bg-layer-transparent-hover",
+          {
+            "opacity-50": isDragging,
+            "ring-accent-primary bg-layer-transparent-hover ring-2 ring-inset": dropInstruction === "make-child",
+          }
+        )}
         style={{ paddingInlineStart: depth * INDENT_PER_LEVEL + 4 }}
       >
+        {/* Sibling-drop indicator lines: top edge = insert as sibling above, bottom = below.
+            Both mean the same reparent (ordering is alphabetical) but the line tells the user
+            the drop is "next to", not "inside". */}
+        {(dropInstruction === "reorder-above" || dropInstruction === "reorder-below") && (
+          <div
+            className={cn("absolute inset-x-1 h-0.5 rounded-full bg-accent-primary", {
+              "top-0": dropInstruction === "reorder-above",
+              "bottom-0": dropInstruction === "reorder-below",
+            })}
+            style={{ insetInlineStart: depth * INDENT_PER_LEVEL + 4 }}
+            aria-hidden
+          />
+        )}
         <span
           className="flex size-3 shrink-0 cursor-grab items-center justify-center text-tertiary opacity-0 transition-opacity group-hover:opacity-100 active:cursor-grabbing"
           aria-hidden
