@@ -175,6 +175,9 @@ from .page.base import (
 )
 from .page.version import PageVersionEndpoint
 
+# fork: title + body page search
+from .page.fork_search import ProjectPageSearchEndpoint
+
 from .search.base import GlobalSearchEndpoint, SearchEndpoint
 from .search.issue import IssueSearchEndpoint
 

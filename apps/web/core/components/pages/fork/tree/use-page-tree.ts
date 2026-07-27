@@ -17,7 +17,7 @@ export type TPageTree = {
   childIdsByParent: Record<string, string[]>;
 };
 
-const matchesTab = (page: TPageInstance, tab: TPageNavigationTabs): boolean => {
+export const matchesTab = (page: TPageInstance, tab: TPageNavigationTabs): boolean => {
   const archived = !!page.archived_at;
   if (tab === "archived") return archived;
   if (archived) return false;
